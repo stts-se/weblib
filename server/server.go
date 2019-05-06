@@ -104,10 +104,12 @@ func main() {
 		log.Fatalf("%v", err)
 	}
 
-	// err = userDB.InsertUser("hanna", "panna")
-	// if err != nil {
-	// 	log.Fatalf("%v", err)
-	// }
+	if _, exists := userDB.UserExists("hanna"); !exists {
+		err = userDB.InsertUser("hanna", "panna")
+		if err != nil {
+			log.Fatalf("%v", err)
+		}
+	}
 
 	p := "8080"
 	r := mux.NewRouter()
