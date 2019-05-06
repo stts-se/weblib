@@ -172,12 +172,12 @@ func (udb UserDB) Authorized(userName, password string) (bool, error) {
 
 	ok := false
 
-	res, err := udb.GetPasswordHash(userName)
+	hash, err := udb.GetPasswordHash(userName)
 	if err != nil {
 		return ok, fmt.Errorf("failed to get user '%s' from user db : %v", userName, err)
 	}
 
-	ok, err = comparePasswordAndHash(password, res)
+	ok, err = comparePasswordAndHash(password, hash)
 	if err != nil {
 		return ok, fmt.Errorf("password doesn't match")
 	}
@@ -186,7 +186,6 @@ func (udb UserDB) Authorized(userName, password string) (bool, error) {
 }
 
 func (udb UserDB) saveFile() error {
-
 	if udb.fileName == "" {
 		return fmt.Errorf("file name not set")
 	}
@@ -255,6 +254,10 @@ func readFile(fName string) (UserDB, error) {
 		users:       make(map[string]string),
 		Constraints: func(user string, password string) (bool, string) { return true, "" },
 	}
+	if !fileExists(fName) {
+		return res, nil
+	}
+
 	lines, err := readLines(fName)
 	if err != nil {
 		return res, err
@@ -274,23 +277,25 @@ func readFile(fName string) (UserDB, error) {
 			delete(res.users, userName)
 		} else {
 			userName := normalise(fs[0])
-			passwordHash, err := generateFromPassword(fs[1], prms)
-			if err != nil {
-				return res, fmt.Errorf("failed to generate hash: %v", err)
-			}
-
 			if _, exists := res.users[userName]; exists {
 				return res, fmt.Errorf("user already exists: %s", userName)
 			}
 
-			res.users[userName] = passwordHash
+			res.users[userName] = fs[1]
 		}
 	}
 	return res, nil
 }
 
+func fileExists(fileName string) bool {
+	if _, err := os.Stat(fileName); os.IsNotExist(err) {
+		return false
+	}
+	return true
+}
+
 func (udb UserDB) clearFile() error {
-	if _, err := os.Stat(udb.fileName); !os.IsNotExist(err) {
+	if fileExists(udb.fileName) {
 		err := os.Remove(udb.fileName)
 		if err != nil {
 			return err

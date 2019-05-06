@@ -85,11 +85,11 @@ func Test_UserDB_File(t *testing.T) {
 		t.Errorf("Fail: %v", err)
 	}
 
-	err = udb1.InsertUser("angela", "secret1")
+	err = udb1.InsertUser("angela", "angelas-secret")
 	if err != nil {
 		t.Errorf("Fail: %v", err)
 	}
-	err = udb1.InsertUser("robert", "secret2")
+	err = udb1.InsertUser("robert", "roberts-secret")
 	if err != nil {
 		t.Errorf("Fail: %v", err)
 	}
@@ -106,6 +106,26 @@ func Test_UserDB_File(t *testing.T) {
 	_, exists := udb2.UserExists("robert")
 	if exists {
 		t.Errorf("oh no : %v", err)
+	}
+
+	// login udb1 angela
+	ok, err := udb1.Authorized("angela", "angelas-secret")
+	if err != nil {
+		t.Errorf("Expected nil, got %v", err)
+	}
+
+	if w, g := true, ok; w != g {
+		t.Errorf(fs, w, g)
+	}
+
+	// login udb2 angela
+	ok, err = udb2.Authorized("angela", "angelas-secret")
+	if err != nil {
+		t.Errorf("Expected nil, got %v", err)
+	}
+
+	if w, g := true, ok; w != g {
+		t.Errorf(fs, w, g)
 	}
 
 	lines, err := readLines(udb1.fileName)
