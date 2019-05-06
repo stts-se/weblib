@@ -9,9 +9,10 @@ import (
 	"sync"
 )
 
+// UserDB a database of users
 type UserDB struct {
 	mutex       *sync.RWMutex
-	fileName    string
+	fileName    string // optional
 	users       map[string]string
 	Constraints func(user string, password string) bool
 }
@@ -24,6 +25,7 @@ var prms = &params{
 	keyLength:   32,
 }
 
+// NewUserDB creates a new user database
 func NewUserDB() UserDB {
 	return UserDB{
 		mutex:       &sync.RWMutex{},
@@ -31,6 +33,8 @@ func NewUserDB() UserDB {
 		Constraints: func(user string, password string) bool { return true },
 	}
 }
+
+// EmptyUserDB creates a new user database with the specified file name, which will be removed if it already exists
 func EmptyUserDB(fileName string) (UserDB, error) {
 	res := NewUserDB()
 	res.fileName = fileName
@@ -38,6 +42,7 @@ func EmptyUserDB(fileName string) (UserDB, error) {
 	return res, err
 }
 
+// ReadUserDB reads a user db from file
 func ReadUserDB(fileName string) (UserDB, error) {
 	res, err := readFile(fileName)
 	if err != nil {
@@ -73,7 +78,7 @@ func (udb UserDB) GetUsers() ([]string, error) {
 	return res, nil
 }
 
-// GetUserByName looks up the user with the specified name
+// UserExists looks up the user with the specified name
 func (udb UserDB) UserExists(userName string) (string, bool) {
 	udb.mutex.RLock()
 	defer udb.mutex.RUnlock()
@@ -138,9 +143,7 @@ func (udb UserDB) DeleteUser(userName string) error {
 	return nil
 }
 
-// UpdatePassword updates the fields of User except for User.ID and User.Name.
-// Zero valued fields (empty string) will be treated as acceptable
-// values, and updated to the empty string in the DB.
+// UpdatePassword updates the password for the specified user
 func (udb UserDB) UpdatePassword(userName string, password string) error {
 	udb.mutex.Lock()
 	defer udb.mutex.Unlock()

@@ -80,7 +80,7 @@ func Test_UserDB(t *testing.T) {
 
 func Test_UserDB_File(t *testing.T) {
 	var err error
-	udb1, err := EmptyUserDB("userdb_test_file")
+	udb1, err := EmptyUserDB("test_files/userdb_test_file")
 	if err != nil {
 		t.Errorf("Fail: %v", err)
 	}
@@ -117,7 +117,7 @@ func Test_UserDB_File(t *testing.T) {
 		t.Errorf("%s", strings.Join(lines, "\n"))
 	}
 
-	lines, err = readLines("userdb_test_file_does_not_exist")
+	lines, err = readLines("test_files/userdb_test_file_does_not_exist")
 	if err == nil {
 		t.Errorf("Fail: expected error here")
 	}
