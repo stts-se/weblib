@@ -179,7 +179,7 @@ func (udb UserDB) Authorized(userName, password string) (bool, error) {
 
 	ok, err = comparePasswordAndHash(password, hash)
 	if err != nil {
-		return ok, fmt.Errorf("password doesn't match")
+		return ok, err
 	}
 
 	return ok, nil

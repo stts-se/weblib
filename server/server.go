@@ -68,7 +68,6 @@ func login(w http.ResponseWriter, r *http.Request) {
 	password := getParam("password", r)
 
 	if userName != "" && password != "" {
-		log.Printf("LOGIN\t<%s>\t<%s>", userName, password)
 		ok, err := userDB.Authorized(userName, password)
 		if err != nil {
 			log.Printf("%v", err)
