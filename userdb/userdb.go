@@ -11,10 +11,14 @@ import (
 
 // UserDB a database of users
 type UserDB struct {
-	mutex       *sync.RWMutex
-	fileName    string // optional
-	users       map[string]string
-	Constraints func(user string, password string) bool
+	mutex    *sync.RWMutex
+	fileName string // optional
+	users    map[string]string
+
+	// Constraints is used to validate an input user + password
+	// returns true + empty string if the user is valid
+	// returns false + message if the user is invalid
+	Constraints func(user string, password string) (bool, string)
 }
 
 var prms = &params{
@@ -30,7 +34,7 @@ func NewUserDB() UserDB {
 	return UserDB{
 		mutex:       &sync.RWMutex{},
 		users:       make(map[string]string),
-		Constraints: func(user string, password string) bool { return true },
+		Constraints: func(user string, password string) (bool, string) { return true, "" },
 	}
 }
 
@@ -44,20 +48,7 @@ func EmptyUserDB(fileName string) (UserDB, error) {
 
 // ReadUserDB reads a user db from file
 func ReadUserDB(fileName string) (UserDB, error) {
-	res, err := readFile(fileName)
-	if err != nil {
-		return res, err
-	}
-	return res, nil
-}
-
-func NewUserDBWithConstraints(fileName string, constraints func(user string, password string) bool) UserDB {
-	return UserDB{
-		mutex:       &sync.RWMutex{},
-		fileName:    fileName,
-		users:       make(map[string]string),
-		Constraints: constraints,
-	}
+	return readFile(fileName)
 }
 
 func normalise(userName string) string {
@@ -111,6 +102,10 @@ func (udb UserDB) InsertUser(userName, password string) error {
 	defer udb.mutex.Unlock()
 	userName = normalise(userName)
 
+	if ok, msg := udb.Constraints(userName, password); !ok {
+		return fmt.Errorf("constraints failed: %s", msg)
+	}
+
 	passwordHash, err := generateFromPassword(password, prms)
 	if err != nil {
 		return fmt.Errorf("failed to generate hash: %v", err)
@@ -148,6 +143,10 @@ func (udb UserDB) UpdatePassword(userName string, password string) error {
 	udb.mutex.Lock()
 	defer udb.mutex.Unlock()
 	userName = normalise(userName)
+
+	if ok, msg := udb.Constraints(userName, password); !ok {
+		return fmt.Errorf("constraints failed: %s", msg)
+	}
 
 	if _, exists := udb.users[userName]; !exists {
 		return fmt.Errorf("no such user: %s", userName)
@@ -254,7 +253,7 @@ func readFile(fName string) (UserDB, error) {
 		mutex:       &sync.RWMutex{},
 		fileName:    fName,
 		users:       make(map[string]string),
-		Constraints: func(user string, password string) bool { return true },
+		Constraints: func(user string, password string) (bool, string) { return true, "" },
 	}
 	lines, err := readLines(fName)
 	if err != nil {

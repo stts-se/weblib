@@ -124,3 +124,47 @@ func Test_UserDB_File(t *testing.T) {
 
 	//lines, err := readLines(udb1.fileName)
 }
+
+func Test_UserDB_Constraints(t *testing.T) {
+	var err error
+	udb := NewUserDB()
+
+	udb.Constraints = func(userName, password string) (bool, string) {
+		if len(userName) == 0 {
+			return false, "empty user name"
+		}
+		if !strings.Contains(userName, "@") {
+			return false, "user name must be an email address"
+		}
+		if len(password) == 0 {
+			return false, "empty password"
+		}
+		return true, ""
+	}
+
+	err = udb.InsertUser("leif", "secret1asds%sdd+")
+	if err == nil {
+		t.Errorf("Fail: expected error")
+	}
+
+	err = udb.InsertUser("nizze@somewhere.else", "aspbsdf sdx2")
+	if err != nil {
+		t.Errorf("Fail: %v", err)
+	}
+
+	err = udb.InsertUser("", "sdx2")
+	if err == nil {
+		t.Errorf("Fail: expected error")
+	}
+
+	err = udb.UpdatePassword("nizze@somewhere.else", "")
+	if err == nil {
+		t.Errorf("Fail: expected error")
+	}
+
+	err = udb.UpdatePassword("nizze@somewhere.else", "asdfasdfasdf ")
+	if err != nil {
+		t.Errorf("Fail: %v", err)
+	}
+
+}
