@@ -50,6 +50,7 @@ func logout(w http.ResponseWriter, r *http.Request) {
 	session.Save(r, w)
 }
 
+// authUser will call authFunc if there is an authorized user; else unauthFunc will be called
 func authUser(authFunc http.HandlerFunc, unauthFunc http.HandlerFunc) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {

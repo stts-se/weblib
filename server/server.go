@@ -88,9 +88,9 @@ func main() {
 	r := mux.NewRouter()
 	r.StrictSlash(true)
 
-	r.HandleFunc("/doc/", generateDoc)
-
 	r.HandleFunc("/", helloWorld)
+
+	r.HandleFunc("/doc/", generateDoc)
 
 	r.HandleFunc("/login", authUser(pageNotFound(), login))
 	r.HandleFunc("/protected", authUser(protected, pageNotFound()))
