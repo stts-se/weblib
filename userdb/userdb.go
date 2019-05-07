@@ -52,11 +52,11 @@ func ReadUserDB(fileName string) (UserDB, error) {
 }
 
 func normalise(userName string) string {
-	return strings.ToLower(userName)
+	return strings.TrimSpace(strings.ToLower(userName))
 }
 
 // GetUsers returns the users defined in the database
-func (udb UserDB) GetUsers() ([]string, error) {
+func (udb UserDB) GetUsers() []string {
 	var res []string
 
 	udb.mutex.RLock()
@@ -66,7 +66,7 @@ func (udb UserDB) GetUsers() ([]string, error) {
 		res = append(res, name)
 	}
 
-	return res, nil
+	return res
 }
 
 // UserExists looks up the user with the specified name
