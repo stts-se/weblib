@@ -37,6 +37,9 @@ func login(w http.ResponseWriter, r *http.Request) {
 		}
 		http.Error(w, "Login failed", http.StatusForbidden)
 		return
+	} else {
+		http.Error(w, "No login credentials provided", http.StatusForbidden)
+		return
 	}
 }
 

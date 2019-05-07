@@ -7,7 +7,7 @@ import (
 
 func protected(w http.ResponseWriter, r *http.Request) {
 	// Print secret message
-	fmt.Fprintln(w, "The cake is a lie and you are logged in!")
+	fmt.Fprintln(w, "Your identity is verified, and you have access to all the secret stuff!")
 }
 
 func listUsers(w http.ResponseWriter, r *http.Request) {

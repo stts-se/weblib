@@ -1,9 +1,9 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -42,22 +42,49 @@ func main() {
 	var err error
 
 	// OPTIONS
-	runHTTPS := true
-	deriveIP := true
+	host := flag.String("host", "127.0.0.1", "server host")
+	port := flag.String("port", "7932", "server port")
+	serverKeyFile := flag.String("key", "server_config/serverkey", "server key file (for session cookies)")
+	userDBFile := flag.String("db", "userdb.txt", "user database")
+	help := flag.Bool("h", false, "print usage and exit")
 
-	args := os.Args[1:]
-	if len(args) != 3 {
-		fmt.Fprintf(os.Stderr, "Usage: server <port> <serverkeyfile> <userdb>\n")
-		os.Exit(0)
+	// go run /usr/local/go/src/crypto/tls/generate_cert.go
+	tlsCert := flag.String("tlsCert", "", "server_config/cert.pem (default disabled)")
+	tlsKey := flag.String("tlsKey", "", "server_config/key.pem (default disabled)")
+
+	flag.Parse()
+
+	args := flag.Args()
+	if len(args) != 0 {
+		fmt.Fprintf(os.Stderr, "Usage: server <options>\n")
+		flag.PrintDefaults()
+		fmt.Fprintf(os.Stderr, "TLS cert/key files can be generated using go utility generate_cert.go\n")
+		os.Exit(1)
 	}
-	port := args[0]
+	if *help {
+		fmt.Fprintf(os.Stderr, "Usage: server <options>\n")
+		flag.PrintDefaults()
+		fmt.Fprintf(os.Stderr, "TLS cert/key files can be generated using go utility generate_cert.go\n")
+		os.Exit(1)
+	}
 
-	cookieStore, err = initCookieStore(args[1])
+	tlsEnabled := false
+	if *tlsCert != "" && *tlsKey != "" {
+		tlsEnabled = true
+	}
+	if !tlsEnabled && (*tlsCert != "" || *tlsKey != "") {
+		fmt.Fprintf(os.Stderr, "Usage: server <options>\n")
+		flag.PrintDefaults()
+		fmt.Fprintf(os.Stderr, "TLS cert/key files can be generated using go utility generate_cert.go\n")
+		os.Exit(1)
+	}
+
+	cookieStore, err = initCookieStore(*serverKeyFile)
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
 
-	userDB, err = initDB(args[2])
+	userDB, err = initDB(*userDBFile)
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
@@ -69,7 +96,6 @@ func main() {
 
 	r.HandleFunc("/login", notLoggedIn(login))
 	r.HandleFunc("/protected", requireAccessRights(protected))
-	//r.HandleFunc("/protected", requireAccessRights(generateDoc))
 	r.HandleFunc("/list_users", requireAccessRights(listUsers))
 	r.HandleFunc("/logout", requireAccessRights(logout))
 
@@ -88,27 +114,13 @@ func main() {
 	})
 	r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("static/"))))
 
-	serverIP := "127.0.0.1"
-	if deriveIP {
-		addrs, err := net.InterfaceAddrs()
-		if err != nil {
-			log.Fatalf("%v", err)
-		}
-		for _, addr := range addrs {
-			ip := strings.Split(addr.String(), "/")[0]
-			if strings.HasPrefix(ip, "192.168") {
-				serverIP = ip
-			}
-		}
-	}
-
 	protocol := "http"
-	if runHTTPS {
+	if tlsEnabled {
 		protocol = "https"
 	}
 	srv := &http.Server{
 		Handler:      r,
-		Addr:         fmt.Sprintf("%s:%s", serverIP, port),
+		Addr:         fmt.Sprintf("%s:%s", *host, *port),
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
@@ -118,9 +130,8 @@ func main() {
 
 	signal.Notify(stop, os.Interrupt)
 	go func() {
-		if runHTTPS {
-			// go run /usr/local/go/src/crypto/tls/generate_cert.go
-			err = srv.ListenAndServeTLS("server_config/cert.pem", "server_config/key.pem")
+		if tlsEnabled {
+			err = srv.ListenAndServeTLS(*tlsCert, *tlsKey)
 		} else {
 			err = srv.ListenAndServe()
 		}
