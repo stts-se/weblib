@@ -1,15 +1,18 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
 	"github.com/stts-se/weblib/userdb"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 // This is filled in by main, listing the URLs handled by the router,
@@ -96,15 +99,81 @@ func logout(w http.ResponseWriter, r *http.Request) {
 
 var userDB userdb.UserDB
 
+func promptPassword() (string, error) {
+	bytePassword, err := terminal.ReadPassword(0)
+	fmt.Println()
+	if err != nil {
+		return "", err
+	}
+	password := string(bytePassword)
+	return password, nil
+}
+
+func initDB(dbFile string) (userdb.UserDB, error) {
+	userDB, err := userdb.ReadUserDB(dbFile)
+	if err != nil {
+		return userDB, err
+	}
+	userDB.Constraints = func(userName, password string) (bool, string) {
+		if len(userName) == 0 {
+			return false, "empty user name"
+		}
+		if len(userName) < 4 {
+			return false, "username must have min 4 chars"
+		}
+		if len(password) == 0 {
+			return false, "empty password"
+		}
+		if len(password) < 4 {
+			return false, "password must have min 4 chars"
+		}
+		return true, ""
+	}
+
+	if len(userDB.GetUsers()) == 0 {
+		reader := bufio.NewReader(os.Stdin)
+		fmt.Printf("Empty user db. Create new user (or Ctrl-c to exit)\nUsername: ")
+		userName, err := reader.ReadString('\n')
+		if err != nil {
+			return userDB, err
+		}
+
+		fmt.Printf("Password: ")
+		password, err := promptPassword()
+		if err != nil {
+			return userDB, err
+		}
+		fmt.Printf("Repeat password: ")
+		passwordCheck, err := promptPassword()
+		if err != nil {
+			return userDB, err
+		}
+		if password != passwordCheck {
+			return userDB, fmt.Errorf("Passwords do not match")
+		}
+		err = userDB.InsertUser(userName, password)
+		if err != nil {
+			return userDB, err
+		}
+		log.Printf("Created user %s", userName)
+	}
+	return userDB, nil
+}
+
 func main() {
 	var err error
 
-	userDB, err = userdb.ReadUserDB("userdb.txt")
+	if len(os.Args) != 3 {
+		fmt.Fprintf(os.Stderr, "Usage: server <port> <userdb>\n")
+		os.Exit(0)
+	}
+
+	userDB, err = initDB(os.Args[2])
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
 
-	p := "8080"
+	p := os.Args[1]
 	r := mux.NewRouter()
 	r.StrictSlash(true)
 
@@ -135,7 +204,7 @@ func main() {
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
-	log.Println("server started on localhost:" + p)
+	log.Printf("Server started on localhost:%s", p)
 
 	log.Fatal(srv.ListenAndServe(), nil)
 	// ListenAndServeTLS(addr, certFile, keyFile string, handler Handler) error
