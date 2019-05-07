@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 )
@@ -66,6 +67,7 @@ func (udb UserDB) GetUsers() []string {
 		res = append(res, name)
 	}
 
+	sort.Strings(res)
 	return res
 }
 
