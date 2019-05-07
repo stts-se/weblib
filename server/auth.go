@@ -37,10 +37,9 @@ func login(w http.ResponseWriter, r *http.Request) {
 		}
 		http.Error(w, "Login failed", http.StatusForbidden)
 		return
-	} else {
-		http.Error(w, "No login credentials provided", http.StatusForbidden)
-		return
 	}
+	http.Error(w, "No login credentials provided", http.StatusForbidden)
+	return
 }
 
 func logout(w http.ResponseWriter, r *http.Request) {
@@ -51,43 +50,15 @@ func logout(w http.ResponseWriter, r *http.Request) {
 	session.Save(r, w)
 }
 
-func userLoggedIn(r *http.Request) bool {
-	session, _ := cookieStore.Get(r, sessionName)
-
-	// Check if user is authenticated
-	if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
-		return false
-	}
-	return true
-}
-
-func notLoggedIn(pass http.HandlerFunc) http.HandlerFunc {
+func authUser(authFunc http.HandlerFunc, unauthFunc http.HandlerFunc) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		if userLoggedIn(r) {
-			http.Error(w, "Already logged in", http.StatusForbidden)
-			return
+		session, _ := cookieStore.Get(r, sessionName)
+		if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
+			unauthFunc(w, r)
+		} else {
+			// TODO: Check if user has access rights to the specified level
+			authFunc(w, r)
 		}
-		pass(w, r)
-	}
-}
-
-func requireAccessRights(pass http.HandlerFunc) http.HandlerFunc {
-
-	return func(w http.ResponseWriter, r *http.Request) {
-
-		if userLoggedIn(r) {
-			pass(w, r)
-		}
-
-		// if !userLoggedIn(r) {
-		// 	http.Error(w, "Not logged in", http.StatusForbidden)
-		// 	return
-		// }
-
-		// // TODO: Check if user has access rights to the specified level
-
-		// pass(w, r)
 	}
 }

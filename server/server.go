@@ -25,8 +25,6 @@ func generateDoc(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%s\n", s)
 }
 
-var cookieStore *sessions.CookieStore
-
 func getParam(paramName string, r *http.Request) string {
 	res := r.FormValue(paramName)
 	if res != "" {
@@ -36,6 +34,7 @@ func getParam(paramName string, r *http.Request) string {
 	return vars[paramName]
 }
 
+var cookieStore *sessions.CookieStore
 var userDB userdb.UserDB
 
 func main() {
@@ -43,14 +42,14 @@ func main() {
 
 	// OPTIONS
 	host := flag.String("host", "127.0.0.1", "server host")
-	port := flag.String("port", "7932", "server port")
-	serverKeyFile := flag.String("key", "server_config/serverkey", "server key file (for session cookies)")
+	port := flag.Int("port", 7932, "server port")
+	serverKeyFile := flag.String("key", "server_config/serverkey", "server key file for session cookies")
 	userDBFile := flag.String("db", "userdb.txt", "user database")
 	help := flag.Bool("h", false, "print usage and exit")
 
 	// go run /usr/local/go/src/crypto/tls/generate_cert.go
-	tlsCert := flag.String("tlsCert", "", "server_config/cert.pem (default disabled)")
-	tlsKey := flag.String("tlsKey", "", "server_config/key.pem (default disabled)")
+	tlsCert := flag.String("tlsCert", "", "server_config/cert.pem (generate with golang's crypto/tls/generate_cert.go) (default disabled)")
+	tlsKey := flag.String("tlsKey", "", "server_config/key.pem (generate with golang's crypto/tls/generate_cert.go) (default disabled)")
 
 	flag.Parse()
 
@@ -58,13 +57,11 @@ func main() {
 	if len(args) != 0 {
 		fmt.Fprintf(os.Stderr, "Usage: server <options>\n")
 		flag.PrintDefaults()
-		fmt.Fprintf(os.Stderr, "TLS cert/key files can be generated using go utility generate_cert.go\n")
 		os.Exit(1)
 	}
 	if *help {
 		fmt.Fprintf(os.Stderr, "Usage: server <options>\n")
 		flag.PrintDefaults()
-		fmt.Fprintf(os.Stderr, "TLS cert/key files can be generated using go utility generate_cert.go\n")
 		os.Exit(1)
 	}
 
@@ -75,7 +72,6 @@ func main() {
 	if !tlsEnabled && (*tlsCert != "" || *tlsKey != "") {
 		fmt.Fprintf(os.Stderr, "Usage: server <options>\n")
 		flag.PrintDefaults()
-		fmt.Fprintf(os.Stderr, "TLS cert/key files can be generated using go utility generate_cert.go\n")
 		os.Exit(1)
 	}
 
@@ -89,15 +85,17 @@ func main() {
 		log.Fatalf("%v", err)
 	}
 
-	r := mux.NewRouter() // http.NewServeMux()
+	r := mux.NewRouter()
 	r.StrictSlash(true)
 
 	r.HandleFunc("/doc/", generateDoc)
 
-	r.HandleFunc("/login", notLoggedIn(login))
-	r.HandleFunc("/protected", requireAccessRights(protected))
-	r.HandleFunc("/list_users", requireAccessRights(listUsers))
-	r.HandleFunc("/logout", requireAccessRights(logout))
+	r.HandleFunc("/", helloWorld)
+
+	r.HandleFunc("/login", authUser(pageNotFound(), login))
+	r.HandleFunc("/protected", authUser(protected, pageNotFound()))
+	r.HandleFunc("/list_users", authUser(listUsers, login))
+	r.HandleFunc("/logout", authUser(logout, login))
 
 	// List route URLs to use as simple on-line documentation
 	docs := make(map[string]string)
@@ -120,7 +118,7 @@ func main() {
 	}
 	srv := &http.Server{
 		Handler:      r,
-		Addr:         fmt.Sprintf("%s:%s", *host, *port),
+		Addr:         fmt.Sprintf("%s:%v", *host, *port),
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
