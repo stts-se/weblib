@@ -3,9 +3,12 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
+	"reflect"
 	"strings"
 	"time"
 
@@ -24,17 +27,7 @@ func generateDoc(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%s\n", s)
 }
 
-// Note: Don't store your key in your source code. Pass it via an
-// environmental variable, or flag (or both), and don't accidentally commit it
-// alongside your code. Ensure your key is sufficiently random - i.e. use Go's
-// crypto/rand or securecookie.GenerateRandomKey(32) and persist the result.
-//var store = sessions.NewCookieStore([]byte(os.Getenv("SESSION_KEY")))
-
-var (
-	// key must be 16, 24 or 32 bytes long (AES-128, AES-192 or AES-256)
-	key   = []byte("super-secret-key-xxxx")
-	store = sessions.NewCookieStore(key)
-)
+var cookieStore *sessions.CookieStore
 
 func getParam(paramName string, r *http.Request) string {
 	res := r.FormValue(paramName)
@@ -46,20 +39,20 @@ func getParam(paramName string, r *http.Request) string {
 }
 
 func protected(w http.ResponseWriter, r *http.Request) {
-	session, _ := store.Get(r, "auth-user-session")
+	session, _ := cookieStore.Get(r, "auth-user-session")
 
 	// Check if user is authenticated
 	if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
-		http.Error(w, "Forbidden", http.StatusForbidden)
+		http.Error(w, "Not logged in", http.StatusForbidden)
 		return
 	}
 
 	// Print secret message
-	fmt.Fprintln(w, "The cake is a lie!")
+	fmt.Fprintln(w, "The cake is a lie and you are logged in!")
 }
 
 func login(w http.ResponseWriter, r *http.Request) {
-	session, _ := store.Get(r, "auth-user-session")
+	session, _ := cookieStore.Get(r, "auth-user-session")
 
 	session.Options = &sessions.Options{
 		Path:     "/",
@@ -90,7 +83,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 }
 
 func logout(w http.ResponseWriter, r *http.Request) {
-	session, _ := store.Get(r, "auth-user-session")
+	session, _ := cookieStore.Get(r, "auth-user-session")
 
 	// Revoke users authentication
 	session.Values["authenticated"] = false
@@ -98,6 +91,70 @@ func logout(w http.ResponseWriter, r *http.Request) {
 }
 
 var userDB userdb.UserDB
+
+func fileExists(fileName string) bool {
+	if _, err := os.Stat(fileName); os.IsNotExist(err) {
+		return false
+	}
+	return true
+}
+
+func initCookieStore(keyFile string) (*sessions.CookieStore, error) {
+	var cs *sessions.CookieStore
+	var key []byte
+	var err error
+	if !fileExists(keyFile) {
+		rand.Seed(time.Now().UnixNano())
+		// Note: Don't store your key in your source code. Pass it via an
+		// environmental variable, or flag (or both), and don't accidentally commit it
+		// alongside your code. Ensure your key is sufficiently random - i.e. use Go's
+		// crypto/rand or securecookie.GenerateRandomKey(32) and persist the result.
+		//var cookieStore = sessions.NewCookieStore([]byte(os.Getenv("SESSION_KEY")))
+
+		// key must be 16, 24 or 32 bytes long (AES-128, AES-192 or AES-256)
+
+		fmt.Printf("No server key defined. Create new server key? (Ctrl-c to exit) [Y/n] ")
+		reader := bufio.NewReader(os.Stdin)
+		var r string
+		r, err = reader.ReadString('\n')
+		if err != nil {
+			return cs, err
+		}
+		r = strings.ToLower(strings.TrimSpace(r))
+		if len(r) > 0 && !strings.HasPrefix(r, "y") {
+			fmt.Fprintf(os.Stderr, "BYE!\n")
+			os.Exit(0)
+		}
+		key = make([]byte, 32)
+		_, err = rand.Read(key)
+		if err != nil {
+			return cs, err
+		}
+		err = ioutil.WriteFile(keyFile, key, 0644)
+		if err != nil {
+			return cs, err
+		}
+		keyCheck, err := ioutil.ReadFile(keyFile)
+		if err != nil {
+			return cs, fmt.Errorf("couldn't re-read key file")
+		}
+		if !reflect.DeepEqual(key, keyCheck) {
+			return cs, fmt.Errorf("session key mismatch")
+		}
+		log.Printf("New key saved to file %s", keyFile)
+
+	} else {
+		key, err = ioutil.ReadFile(keyFile)
+		if err != nil {
+			return cs, err
+		}
+		if len(key) != 32 {
+			return cs, fmt.Errorf("Invalid key length: %d", len(key))
+		}
+	}
+	cs = sessions.NewCookieStore([]byte(key))
+	return cs, nil
+}
 
 func promptPassword() (string, error) {
 	bytePassword, err := terminal.ReadPassword(0)
@@ -132,30 +189,42 @@ func initDB(dbFile string) (userdb.UserDB, error) {
 
 	if len(userDB.GetUsers()) == 0 {
 		reader := bufio.NewReader(os.Stdin)
-		fmt.Printf("Empty user db. Create new user (or Ctrl-c to exit)\nUsername: ")
-		userName, err := reader.ReadString('\n')
-		if err != nil {
-			return userDB, err
-		}
+		fmt.Println("Empty user db. Create new user? (Ctrl-c to exit)")
+		for {
+			fmt.Printf("Username: ")
+			userName, err := reader.ReadString('\n')
+			if err != nil {
+				return userDB, err
+			}
 
-		fmt.Printf("Password: ")
-		password, err := promptPassword()
-		if err != nil {
-			return userDB, err
+			fmt.Printf("Password: ")
+			password, err := promptPassword()
+			if err != nil {
+				return userDB, err
+			}
+			fmt.Printf("Repeat password: ")
+			passwordCheck, err := promptPassword()
+			if err != nil {
+				return userDB, err
+			}
+			if password != passwordCheck {
+				return userDB, fmt.Errorf("Passwords do not match")
+			}
+			err = userDB.InsertUser(userName, password)
+			if err != nil {
+				return userDB, err
+			}
+			log.Printf("Created user %s", userName)
+			fmt.Printf("Create another user? [Y/n] ")
+			r, err := reader.ReadString('\n')
+			if err != nil {
+				return userDB, err
+			}
+			r = strings.ToLower(strings.TrimSpace(r))
+			if len(r) > 0 && !strings.HasPrefix(r, "y") {
+				break
+			}
 		}
-		fmt.Printf("Repeat password: ")
-		passwordCheck, err := promptPassword()
-		if err != nil {
-			return userDB, err
-		}
-		if password != passwordCheck {
-			return userDB, fmt.Errorf("Passwords do not match")
-		}
-		err = userDB.InsertUser(userName, password)
-		if err != nil {
-			return userDB, err
-		}
-		log.Printf("Created user %s", userName)
 	}
 	return userDB, nil
 }
@@ -163,17 +232,23 @@ func initDB(dbFile string) (userdb.UserDB, error) {
 func main() {
 	var err error
 
-	if len(os.Args) != 3 {
-		fmt.Fprintf(os.Stderr, "Usage: server <port> <userdb>\n")
+	args := os.Args[1:]
+	if len(args) != 3 {
+		fmt.Fprintf(os.Stderr, "Usage: server <port> <serverkeyfile> <userdb>\n")
 		os.Exit(0)
 	}
+	port := args[0]
 
-	userDB, err = initDB(os.Args[2])
+	cookieStore, err = initCookieStore(args[1])
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
 
-	p := os.Args[1]
+	userDB, err = initDB(args[2])
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
+
 	r := mux.NewRouter()
 	r.StrictSlash(true)
 
@@ -199,12 +274,13 @@ func main() {
 	r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("static/"))))
 
 	srv := &http.Server{
-		Handler:      r,
-		Addr:         "127.0.0.1:" + p,
+		Handler: r,
+		// Addr:         "127.0.0.1:" + port,
+		Addr:         ":" + port,
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
-	log.Printf("Server started on localhost:%s", p)
+	log.Printf("Server started on localhost:%s", port)
 
 	log.Fatal(srv.ListenAndServe(), nil)
 	// ListenAndServeTLS(addr, certFile, keyFile string, handler Handler) error
