@@ -3,10 +3,13 @@ package main
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/sessions"
 )
 
@@ -59,6 +62,17 @@ var invitationDB = invitationsHolder{
 	maxAge:      86400 * 7, // one week in seconds
 }
 
+func genPassword(length int) string {
+	chars := []rune("ABCDEFGHJKLMNPQRSTUVWXYZ" +
+		"abcdefghijkmnopqrstuvwxyz" +
+		"123456789()_")
+	var b strings.Builder
+	for i := 0; i < length; i++ {
+		b.WriteRune(chars[rand.Intn(len(chars))])
+	}
+	return b.String()
+}
+
 func invite(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: secure params
@@ -66,13 +80,7 @@ func invite(w http.ResponseWriter, r *http.Request) {
 	email := getParam("email", r)
 
 	if email != "" {
-		// TODO
-		token, err := genUUID(32)
-		if err != nil {
-			log.Printf("Couldn't generate token : %v", err)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
-			return
-		}
+		token := uuid.New().String()
 		invitationDB.mutex.RLock()
 		defer invitationDB.mutex.RUnlock()
 
@@ -86,12 +94,7 @@ func invite(w http.ResponseWriter, r *http.Request) {
 		invitationDB.invitations[token] = time.Now()
 
 		userName := email
-		password, err := genUUID(10)
-		if err != nil {
-			log.Printf("Couldn't generate password : %v", err)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
-			return
-		}
+		password := genPassword(10)
 		link := fmt.Sprintf("%s://%s/auth/signup?token=%s&username=%s&password=%s", serverProtocol, serverAddress, token, userName, password)
 		// link := fmt.Sprintf("%s://%s/auth/signup?token=%s", serverProtocol, serverAddress, token)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")

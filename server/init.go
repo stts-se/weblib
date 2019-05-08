@@ -26,6 +26,13 @@ func promptPassword() (string, error) {
 	return password, nil
 }
 
+func fileExists(fileName string) bool {
+	if _, err := os.Stat(fileName); os.IsNotExist(err) {
+		return false
+	}
+	return true
+}
+
 func initCookieStore(keyFile string) (*sessions.CookieStore, error) {
 	var cs *sessions.CookieStore
 	var key []byte

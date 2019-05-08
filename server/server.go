@@ -151,7 +151,7 @@ func main() {
 			err = srv.ListenAndServe()
 		}
 		if err != nil {
-			log.Fatalf("Couldn't start server on port %s : %v", port, err)
+			log.Fatalf("Couldn't start server on port %v : %v", port, err)
 		}
 	}()
 	log.Printf("Server up and running on %s://%s", serverProtocol, srv.Addr)
