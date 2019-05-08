@@ -37,6 +37,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 			// Set user as authenticated
 			session.Values["authenticated"] = true
 			session.Save(r, w)
+			log.Printf("Logged in successfully")
 			fmt.Fprintf(w, "Logged in successfully\n")
 			return
 		}
@@ -66,55 +67,75 @@ func invite(w http.ResponseWriter, r *http.Request) {
 
 	if email != "" {
 		// TODO
-		uuid, err := genUUID(32)
+		token, err := genUUID(32)
 		if err != nil {
-			log.Printf("genUUID failed : %v", err)
+			log.Printf("Couldn't generate token : %v", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
 		invitationDB.mutex.RLock()
 		defer invitationDB.mutex.RUnlock()
 
-		if _, ok := invitationDB.invitations[uuid]; ok {
-			log.Printf("uuid already exists : %s", uuid)
+		purgeInvitations()
+
+		if _, ok := invitationDB.invitations[token]; ok {
+			log.Printf("Token already exists : %s", token)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
-		invitationDB.invitations[uuid] = time.Now()
+		invitationDB.invitations[token] = time.Now()
 
-		// userName := email
-		// password := "12345678"
-		// link := fmt.Sprintf("%s://%s/auth/signup?uuid=%s&username=%s&password=%s", serverProtocol, serverAddress, uuid, userName, password)
-		link := fmt.Sprintf("%s://%s/auth/signup?uuid=%s", serverProtocol, serverAddress, uuid)
+		userName := email
+		password, err := genUUID(10)
+		if err != nil {
+			log.Printf("Couldn't generate password : %v", err)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+		link := fmt.Sprintf("%s://%s/auth/signup?token=%s&username=%s&password=%s", serverProtocol, serverAddress, token, userName, password)
+		// link := fmt.Sprintf("%s://%s/auth/signup?token=%s", serverProtocol, serverAddress, token)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		log.Printf("Created invitation link: %s", link)
 		fmt.Fprintf(w, `Invitation link: <a href="%s">%s</a>`, link, link)
 		return
 	}
 	http.Error(w, "No invitation credentials provided", http.StatusBadRequest)
 }
 
-func signup(w http.ResponseWriter, r *http.Request) {
+// not thread safe -- lock mutex before calling
+func purgeInvitations() {
+	for token, created := range invitationDB.invitations {
+		if time.Since(created).Seconds() > invitationDB.maxAge {
+			delete(invitationDB.invitations, token)
+			log.Printf("Token expired: %s", token)
+		}
+	}
+	log.Printf("Purged invitation db")
+}
 
+func signup(w http.ResponseWriter, r *http.Request) {
 	// TODO: secure params
 	//userName, password, hash, _ := r.BasicAuth()
-	uuid := getParam("uuid", r)
+	token := getParam("token", r)
 	userName := getParam("username", r)
 	password := getParam("password", r)
-	if uuid != "" && userName != "" && password != "" {
+	if token != "" && userName != "" && password != "" {
 
 		invitationDB.mutex.RLock()
 		defer invitationDB.mutex.RUnlock()
 
-		// verify uuid
-		created, uuidExists := invitationDB.invitations[uuid]
-		if !uuidExists {
-			log.Printf("Unknown uuid : %s", uuid)
+		purgeInvitations()
+
+		// verify token
+		created, tokenExists := invitationDB.invitations[token]
+		if !tokenExists {
+			log.Printf("Unknown token : %s", token)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
 		if time.Since(created).Seconds() > invitationDB.maxAge {
-			delete(invitationDB.invitations, uuid)
-			log.Printf("Expired uuid created at %v: %s", created, uuid)
+			delete(invitationDB.invitations, token)
+			log.Printf("Expired token: %s", token)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
@@ -125,6 +146,8 @@ func signup(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
+		delete(invitationDB.invitations, token)
+		log.Printf("Created used %s", userName)
 		fmt.Fprintf(w, "Created user %s\n", userName)
 		return
 	}
@@ -137,6 +160,7 @@ func logout(w http.ResponseWriter, r *http.Request) {
 	// Revoke users authentication
 	session.Values["authenticated"] = false
 	session.Save(r, w)
+	log.Printf("Logged out successfully")
 	fmt.Fprintf(w, "Logged out successfully\n")
 }
 
