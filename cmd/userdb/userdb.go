@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 	"os"
@@ -21,9 +22,7 @@ func promptPassword() (string, error) {
 	return password, nil
 }
 
-func getUserDB(m meta, args []string) userdb.UserDB {
-	dbFile := m.getArgValue(args, "dbfile")
-
+func getUserDB(dbFile string) userdb.UserDB {
 	userDB, err := userdb.ReadUserDB(dbFile)
 	if err != nil {
 		log.Fatalf("Could't read user db : %v", err)
@@ -47,9 +46,18 @@ func getUserDB(m meta, args []string) userdb.UserDB {
 	return userDB
 }
 
-func insertUser(meta meta, args []string) {
-	userDB := getUserDB(meta, args)
-	userName := meta.getArgValue(args, "username")
+func insertUser(meta meta, dbFile string, args []string) {
+	userDB := getUserDB(dbFile)
+	//userName := meta.getArgValue(args, "username")
+
+	fmt.Printf("Username: ")
+	reader := bufio.NewReader(os.Stdin)
+	userName, err := reader.ReadString('\n')
+	if err != nil {
+		log.Fatalf("Could't read username from terminal : %v", err)
+	}
+	userName = strings.ToLower(strings.TrimSpace(userName))
+
 	fmt.Printf("Password: ")
 	password, err := promptPassword()
 	if err != nil {
@@ -70,8 +78,8 @@ func insertUser(meta meta, args []string) {
 	fmt.Fprintf(os.Stderr, "Created user %s\n", userName)
 }
 
-func deleteUser(meta meta, args []string) {
-	userDB := getUserDB(meta, args)
+func deleteUser(meta meta, dbFile string, args []string) {
+	userDB := getUserDB(dbFile)
 	userName := meta.getArgValue(args, "username")
 	err := userDB.DeleteUser(userName)
 	if err != nil {
@@ -80,8 +88,7 @@ func deleteUser(meta meta, args []string) {
 	fmt.Fprintf(os.Stderr, "Deleted user %s\n", userName)
 }
 
-func createDB(meta meta, args []string) {
-	dbFile := meta.getArgValue(args, "dbfile")
+func createDB(meta meta, dbFile string, args []string) {
 	fh, err := os.Create(dbFile)
 	if err != nil {
 		log.Fatalf("Couldn't create db : %v", err)
@@ -89,8 +96,7 @@ func createDB(meta meta, args []string) {
 	fmt.Fprintf(fh, "")
 }
 
-func clearDB(meta meta, args []string) {
-	dbFile := meta.getArgValue(args, "dbfile")
+func clearDB(meta meta, dbFile string, args []string) {
 	fh, err := os.Create(dbFile)
 	if err != nil {
 		log.Fatalf("Couldn't clear db : %v", err)
@@ -98,11 +104,17 @@ func clearDB(meta meta, args []string) {
 	fmt.Fprintf(fh, "")
 }
 
-func listUsers(meta meta, args []string) {
-	userDB := getUserDB(meta, args)
-	for _, u := range userDB.GetUsers() {
+func listUsers(meta meta, dbFile string, args []string) {
+	userDB := getUserDB(dbFile)
+	users := userDB.GetUsers()
+	for _, u := range users {
 		fmt.Println(u)
 	}
+	pluralS := "s"
+	if len(users) == 1 {
+		pluralS = ""
+	}
+	fmt.Printf("%d user%s\n", len(users), pluralS)
 }
 
 var cmds = []cmd{
@@ -110,7 +122,7 @@ var cmds = []cmd{
 		meta: meta{
 			name:     "insert",
 			desc:     "Insert user",
-			argNames: []string{"dbfile", "username"},
+			argNames: []string{},
 		},
 		f: insertUser,
 	},
@@ -118,7 +130,7 @@ var cmds = []cmd{
 		meta: meta{
 			name:     "delete",
 			desc:     "Delete user",
-			argNames: []string{"dbfile", "username"},
+			argNames: []string{"username"},
 		},
 		f: deleteUser,
 	},
@@ -126,7 +138,7 @@ var cmds = []cmd{
 		meta: meta{
 			name:     "list",
 			desc:     "List users",
-			argNames: []string{"dbfile"},
+			argNames: []string{},
 		},
 		f: listUsers,
 	},
@@ -134,7 +146,7 @@ var cmds = []cmd{
 		meta: meta{
 			name:     "create",
 			desc:     "Create empty database",
-			argNames: []string{"dbfile"},
+			argNames: []string{},
 		},
 		f: createDB,
 	},
@@ -142,7 +154,7 @@ var cmds = []cmd{
 		meta: meta{
 			name:     "clear",
 			desc:     "Clear database",
-			argNames: []string{"dbfile"},
+			argNames: []string{},
 		},
 		f: clearDB,
 	},
@@ -156,7 +168,7 @@ type meta struct {
 
 type cmd struct {
 	meta meta
-	f    func(meta meta, args []string)
+	f    func(meta meta, dbFile string, args []string)
 }
 
 func (m meta) validateArgs(args []string) {
@@ -176,24 +188,40 @@ func (m meta) getArgValue(args []string, argName string) string {
 	return ""
 }
 
-func (c cmd) apply(args []string) {
-	c.f(c.meta, args)
+func (c cmd) apply(dbFile string, args []string) {
+	c.f(c.meta, dbFile, args)
+}
+
+func printHelp() {
+	fmt.Fprintf(os.Stderr, "userdb <dbfile> <command> <args>\n")
+	fmt.Fprintf(os.Stderr, " %s\n", "help")
+	for _, c := range cmds {
+		args := []string{}
+		for _, a := range c.meta.argNames {
+			args = append(args, fmt.Sprintf("<%s>", a))
+		}
+		argsString := strings.Join(args, " ")
+		fmt.Fprintf(os.Stderr, " %s %s\n", c.meta.name, argsString)
+	}
 }
 
 func main() {
 	args := os.Args[1:]
-	if len(args) < 1 {
-		fmt.Fprintf(os.Stderr, "userdb <command> <args>\n")
-		for _, c := range cmds {
-			fmt.Fprintf(os.Stderr, " %s %s\n", c.meta.name, strings.Join(c.meta.argNames, " "))
-		}
+	if len(args) < 1 || args[0] == "help" {
+		printHelp()
 		os.Exit(0)
 	}
 
-	cmdName := args[0]
+	var dbFile = args[0]
+	var cmdName = args[1]
+
+	if cmdName == "help" {
+		printHelp()
+		os.Exit(0)
+	}
 	for _, c := range cmds {
 		if c.meta.name == cmdName {
-			c.apply(args[1:])
+			c.apply(dbFile, args[2:])
 			os.Exit(0)
 		}
 	}
