@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"os/signal"
@@ -36,8 +37,13 @@ func getParam(paramName string, r *http.Request) string {
 
 var cookieStore *sessions.CookieStore
 var userDB userdb.UserDB
+var serverProtocol string
+var serverAddress string
 
 func main() {
+
+	rand.Seed(time.Now().UnixNano())
+
 	var err error
 
 	// OPTIONS
@@ -77,25 +83,35 @@ func main() {
 
 	cookieStore, err = initCookieStore(*serverKeyFile)
 	if err != nil {
-		log.Fatalf("%v", err)
+		log.Fatalf("Cookie store init failed : %v", err)
 	}
 
 	userDB, err = initDB(*userDBFile)
 	if err != nil {
-		log.Fatalf("%v", err)
+		log.Fatalf("UserDB init failed : %v", err)
 	}
 
 	r := mux.NewRouter()
 	r.StrictSlash(true)
 
-	r.HandleFunc("/", helloWorld)
+	r.HandleFunc("/", authUser(message("Hello, you are logged in!"), message("Hello, you are not logged in!")))
 
 	r.HandleFunc("/doc/", generateDoc)
 
-	r.HandleFunc("/login", authUser(pageNotFound(), login))
-	r.HandleFunc("/protected", authUser(protected, pageNotFound()))
-	r.HandleFunc("/list_users", authUser(listUsers, login))
-	r.HandleFunc("/logout", authUser(logout, login))
+	authR := r.PathPrefix("/auth").Subrouter()
+	authR.HandleFunc("/", message("User authorization"))
+	authR.HandleFunc("/login", authUser(pageNotFound(), login))
+	authR.HandleFunc("/logout", authUser(logout, pageNotFound()))
+	authR.HandleFunc("/invite", authUser(invite, pageNotFound()))
+	authR.HandleFunc("/signup", signup)
+
+	protectedR := r.PathPrefix("/protected").Subrouter()
+	protectedR.HandleFunc("/", message("Protected area"))
+	protectedR.HandleFunc("/list_users", authUser(listUsers, pageNotFound()))
+
+	// TODO: Divide into different access rights something like this for each user level (admin, user, etc)
+	// adminR := protectedR.PathPrefix("/admin").Subrouter()
+	// adminR.HandleFunc("/list_users", authUser(listUsers, pageNotFound()))
 
 	// List route URLs to use as simple on-line documentation
 	docs := make(map[string]string)
@@ -112,17 +128,18 @@ func main() {
 	})
 	r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("static/"))))
 
-	protocol := "http"
+	serverProtocol = "http"
 	if tlsEnabled {
-		protocol = "https"
+		serverProtocol = "https"
 	}
+	serverAddress = fmt.Sprintf("%s:%v", *host, *port)
 	srv := &http.Server{
 		Handler:      r,
-		Addr:         fmt.Sprintf("%s:%v", *host, *port),
+		Addr:         serverAddress,
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
-	log.Printf("Starting server on %s://%s", protocol, srv.Addr)
+	log.Printf("Starting server on %s://%s", serverProtocol, srv.Addr)
 
 	stop := make(chan os.Signal, 1)
 
@@ -137,7 +154,7 @@ func main() {
 			log.Fatalf("Couldn't start server on port %s : %v", port, err)
 		}
 	}()
-	log.Printf("Server up and running on %s://%s", protocol, srv.Addr)
+	log.Printf("Server up and running on %s://%s", serverProtocol, srv.Addr)
 
 	<-stop
 

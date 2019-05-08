@@ -9,20 +9,12 @@ import (
 	"os"
 	"reflect"
 	"strings"
-	"time"
 
 	"github.com/gorilla/sessions"
 	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/stts-se/weblib/userdb"
 )
-
-func fileExists(fileName string) bool {
-	if _, err := os.Stat(fileName); os.IsNotExist(err) {
-		return false
-	}
-	return true
-}
 
 func promptPassword() (string, error) {
 	bytePassword, err := terminal.ReadPassword(0)
@@ -39,7 +31,6 @@ func initCookieStore(keyFile string) (*sessions.CookieStore, error) {
 	var key []byte
 	var err error
 	if !fileExists(keyFile) {
-		rand.Seed(time.Now().UnixNano())
 		// Note: Don't store your key in your source code. Pass it via an
 		// environmental variable, or flag (or both), and don't accidentally commit it
 		// alongside your code. Ensure your key is sufficiently random - i.e. use Go's
