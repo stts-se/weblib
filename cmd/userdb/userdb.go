@@ -78,14 +78,16 @@ func insertUser(meta meta, dbFile string, args []string) {
 	fmt.Fprintf(os.Stderr, "Created user %s\n", userName)
 }
 
-func deleteUser(meta meta, dbFile string, args []string) {
+func deleteUsers(meta meta, dbFile string, args []string) {
 	userDB := getUserDB(dbFile)
-	userName := meta.getArgValue(args, "username")
-	err := userDB.DeleteUser(userName)
-	if err != nil {
-		log.Fatalf("Couldn't delete user : %v", err)
+	userNames := meta.getArgValues(args, "usernames*")
+	for _, userName := range userNames {
+		err := userDB.DeleteUser(userName)
+		if err != nil {
+			log.Fatalf("Couldn't delete user : %v", err)
+		}
+		fmt.Fprintf(os.Stderr, "Deleted user %s\n", userName)
 	}
-	fmt.Fprintf(os.Stderr, "Deleted user %s\n", userName)
 }
 
 func createDB(meta meta, dbFile string, args []string) {
@@ -129,10 +131,10 @@ var cmds = []cmd{
 	cmd{
 		meta: meta{
 			name:     "delete",
-			desc:     "Delete user",
-			argNames: []string{"username"},
+			desc:     "Delete users",
+			argNames: []string{"usernames*"},
 		},
-		f: deleteUser,
+		f: deleteUsers,
 	},
 	cmd{
 		meta: meta{
@@ -172,6 +174,15 @@ type cmd struct {
 }
 
 func (m meta) validateArgs(args []string) {
+	for i, arg := range m.argNames {
+		if i != len(m.argNames)-1 && strings.HasSuffix(arg, "*") {
+			log.Fatalf("%s : variable length argument can only be used in final position, found [%s]", m.name, strings.Join(m.argNames, " "))
+		}
+	}
+	lastArgName := m.argNames[len(m.argNames)-1]
+	if strings.HasSuffix(lastArgName, "*") {
+		args = args[0:len(m.argNames)]
+	}
 	if len(args) != len(m.argNames) {
 		log.Fatalf("%s : required args [%s], found [%s]", m.name, strings.Join(m.argNames, " "), strings.Join(args, " "))
 	}
@@ -186,6 +197,26 @@ func (m meta) getArgValue(args []string, argName string) string {
 	}
 	log.Fatalf("Invalid arg name: %s", argName)
 	return ""
+}
+
+func (m meta) getArgValues(args []string, argName string) []string {
+	m.validateArgs(args)
+	startIndex := len(args)
+	res := []string{}
+	for i, s := range m.argNames {
+		if s == argName {
+			startIndex = i
+		}
+	}
+	for i, s := range args {
+		if i >= startIndex {
+			res = append(res, s)
+		}
+	}
+	if len(res) == 0 {
+		log.Fatalf("Invalid arg name: %s", argName)
+	}
+	return res
 }
 
 func (c cmd) apply(dbFile string, args []string) {
