@@ -35,6 +35,14 @@ func getParam(paramName string, r *http.Request) string {
 	return vars[paramName]
 }
 
+func closeServer() error {
+	err := userDB.SaveFile()
+	if err != nil {
+		return fmt.Errorf("couldn't save user db : %v", err)
+	}
+	return nil
+}
+
 var cookieStore *sessions.CookieStore
 var userDB userdb.UserDB
 var serverProtocol string
@@ -103,7 +111,7 @@ func main() {
 	authR.HandleFunc("/login", authUser(pageNotFound(), login))
 	authR.HandleFunc("/logout", authUser(logout, pageNotFound()))
 	authR.HandleFunc("/invite", authUser(invite, pageNotFound()))
-	authR.HandleFunc("/signup", signup)
+	authR.HandleFunc("/signup/{token}", signup)
 
 	protectedR := r.PathPrefix("/protected").Subrouter()
 	protectedR.HandleFunc("/", message("Protected area"))
@@ -160,5 +168,9 @@ func main() {
 
 	// This happens after Ctrl-C
 	fmt.Fprintf(os.Stderr, "\n")
+	err = closeServer()
+	if err != nil {
+		log.Fatalf("Server stopped with an error on close : %v", err)
+	}
 	log.Println("Server stopped")
 }

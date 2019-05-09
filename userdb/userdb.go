@@ -187,7 +187,7 @@ func (udb UserDB) Authorized(userName, password string) (bool, error) {
 	return ok, nil
 }
 
-func (udb UserDB) saveFile() error {
+func (udb UserDB) SaveFile() error {
 	if udb.fileName == "" {
 		return fmt.Errorf("file name not set")
 	}

@@ -92,7 +92,7 @@ func initCookieStore(keyFile string) (*sessions.CookieStore, error) {
 func initDB(dbFile string) (userdb.UserDB, error) {
 	userDB, err := userdb.ReadUserDB(dbFile)
 	if err != nil {
-		return userDB, err
+		return userDB, fmt.Errorf("couldn't read user db : %v", err)
 	}
 	userDB.Constraints = func(userName, password string) (bool, string) {
 		if len(userName) == 0 {
@@ -148,6 +148,10 @@ func initDB(dbFile string) (userdb.UserDB, error) {
 				break
 			}
 		}
+	}
+	err = userDB.SaveFile()
+	if err != nil {
+		return userDB, fmt.Errorf("couldn't save user db : %v", err)
 	}
 	return userDB, nil
 }

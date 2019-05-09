@@ -16,6 +16,9 @@ import (
 var sessionName = "auth-user-session"
 
 func login(w http.ResponseWriter, r *http.Request) {
+
+	w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Basic realm="%s"`, serverAddress))
+
 	session, _ := cookieStore.Get(r, sessionName)
 
 	session.Options = &sessions.Options{
@@ -24,10 +27,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 	}
 
-	// TODO: secure params
-	//userName, password, _ := r.BasicAuth()
-	userName := getParam("username", r)
-	password := getParam("password", r)
+	userName, password, _ := r.BasicAuth()
 
 	if userName != "" && password != "" {
 		ok, err := userDB.Authorized(userName, password)
@@ -50,16 +50,16 @@ func login(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "No login credentials provided", http.StatusBadRequest)
 }
 
-type invitationsHolder struct {
-	mutex       *sync.RWMutex
-	invitations map[string]time.Time
-	maxAge      float64 // max age in seconds
+type invitationHolder struct {
+	mutex  *sync.RWMutex
+	tokens map[string]time.Time
+	maxAge float64 // max age in seconds
 }
 
-var invitationDB = invitationsHolder{
-	mutex:       &sync.RWMutex{},
-	invitations: make(map[string]time.Time),
-	maxAge:      86400 * 7, // one week in seconds
+var invitations = invitationHolder{
+	mutex:  &sync.RWMutex{},
+	tokens: make(map[string]time.Time),
+	maxAge: 86400 * 7, // one week in seconds
 }
 
 func genPassword(length int) string {
@@ -75,41 +75,30 @@ func genPassword(length int) string {
 
 func invite(w http.ResponseWriter, r *http.Request) {
 
-	// TODO: secure params
-	//email, _ := r.BasicAuth()
-	email := getParam("email", r)
+	token := uuid.New().String()
+	invitations.mutex.RLock()
+	defer invitations.mutex.RUnlock()
 
-	if email != "" {
-		token := uuid.New().String()
-		invitationDB.mutex.RLock()
-		defer invitationDB.mutex.RUnlock()
+	purgeInvitations()
 
-		purgeInvitations()
-
-		if _, ok := invitationDB.invitations[token]; ok {
-			log.Printf("Token already exists : %s", token)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
-			return
-		}
-		invitationDB.invitations[token] = time.Now()
-
-		userName := email
-		password := genPassword(10)
-		link := fmt.Sprintf("%s://%s/auth/signup?token=%s&username=%s&password=%s", serverProtocol, serverAddress, token, userName, password)
-		// link := fmt.Sprintf("%s://%s/auth/signup?token=%s", serverProtocol, serverAddress, token)
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		log.Printf("Created invitation link: %s", link)
-		fmt.Fprintf(w, `Invitation link: <a href="%s">%s</a>`, link, link)
+	if _, ok := invitations.tokens[token]; ok {
+		log.Printf("Token already exists : %s", token)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	http.Error(w, "No invitation credentials provided", http.StatusBadRequest)
+	invitations.tokens[token] = time.Now()
+
+	link := fmt.Sprintf("%s://%s/auth/signup/%s", serverProtocol, serverAddress, token)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	log.Printf("Created invitation link: %s", link)
+	fmt.Fprintf(w, `Invitation link: <a href="%s">%s</a>%s`, link, link, "\n")
 }
 
-// not thread safe -- lock mutex before calling
+// NB! not thread safe -- lock mutex before calling
 func purgeInvitations() {
-	for token, created := range invitationDB.invitations {
-		if time.Since(created).Seconds() > invitationDB.maxAge {
-			delete(invitationDB.invitations, token)
+	for token, created := range invitations.tokens {
+		if time.Since(created).Seconds() > invitations.maxAge {
+			delete(invitations.tokens, token)
 			log.Printf("Token expired: %s", token)
 		}
 	}
@@ -117,27 +106,24 @@ func purgeInvitations() {
 }
 
 func signup(w http.ResponseWriter, r *http.Request) {
-	// TODO: secure params
-	//userName, password, hash, _ := r.BasicAuth()
+	userName, password, _ := r.BasicAuth()
 	token := getParam("token", r)
-	userName := getParam("username", r)
-	password := getParam("password", r)
 	if token != "" && userName != "" && password != "" {
 
-		invitationDB.mutex.RLock()
-		defer invitationDB.mutex.RUnlock()
+		invitations.mutex.RLock()
+		defer invitations.mutex.RUnlock()
 
 		purgeInvitations()
 
 		// verify token
-		created, tokenExists := invitationDB.invitations[token]
+		created, tokenExists := invitations.tokens[token]
 		if !tokenExists {
 			log.Printf("Unknown token : %s", token)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
-		if time.Since(created).Seconds() > invitationDB.maxAge {
-			delete(invitationDB.invitations, token)
+		if time.Since(created).Seconds() > invitations.maxAge {
+			delete(invitations.tokens, token)
 			log.Printf("Expired token: %s", token)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
@@ -149,7 +135,7 @@ func signup(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
-		delete(invitationDB.invitations, token)
+		delete(invitations.tokens, token)
 		log.Printf("Created used %s", userName)
 		fmt.Fprintf(w, "Created user %s\n", userName)
 		return
