@@ -16,7 +16,7 @@
 
 *Create invitation*
 
-    $ curl -s --cookie "auth-user-session=<COOKIE>" 127.0.0.1:7932/auth/invite
+    $ curl -s --cookie "auth-user-session=<COOKIE>" http://127.0.0.1:7932/auth/invite
 
     Invitation link: http://127.0.0.1:7932/auth/signup/<INVITATION_TOKEN>
 
