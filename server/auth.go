@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 	"log"
-	"math/rand"
+	//	"math/rand"
 	"net/http"
-	"strings"
+	//	"strings"
 	"sync"
 	"time"
 
@@ -17,7 +17,7 @@ var sessionName = "auth-user-session"
 
 func login(w http.ResponseWriter, r *http.Request) {
 
-	w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Basic realm="%s"`, serverAddress))
+	// should be set client side w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Basic realm="%s"`, serverAddress))
 
 	session, _ := cookieStore.Get(r, sessionName)
 
@@ -62,16 +62,16 @@ var invitations = invitationHolder{
 	maxAge: 86400 * 7, // one week in seconds
 }
 
-func genPassword(length int) string {
-	chars := []rune("ABCDEFGHJKLMNPQRSTUVWXYZ" +
-		"abcdefghijkmnopqrstuvwxyz" +
-		"123456789()_")
-	var b strings.Builder
-	for i := 0; i < length; i++ {
-		b.WriteRune(chars[rand.Intn(len(chars))])
-	}
-	return b.String()
-}
+// func genPassword(length int) string {
+// 	chars := []rune("ABCDEFGHJKLMNPQRSTUVWXYZ" +
+// 		"abcdefghijkmnopqrstuvwxyz" +
+// 		"123456789()_")
+// 	var b strings.Builder
+// 	for i := 0; i < length; i++ {
+// 		b.WriteRune(chars[rand.Intn(len(chars))])
+// 	}
+// 	return b.String()
+// }
 
 func invite(w http.ResponseWriter, r *http.Request) {
 
@@ -91,7 +91,7 @@ func invite(w http.ResponseWriter, r *http.Request) {
 	link := fmt.Sprintf("%s://%s/auth/signup/%s", serverProtocol, serverAddress, token)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	log.Printf("Created invitation link: %s", link)
-	fmt.Fprintf(w, `Invitation link: <a href="%s">%s</a>%s`, link, link, "\n")
+	fmt.Fprintf(w, "Invitation link: %s\n", link)
 }
 
 // NB! not thread safe -- lock mutex before calling
