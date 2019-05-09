@@ -74,7 +74,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 				HttpOnly: true,
 			}
 
-			log.Printf("Session %v", session)
+			log.Printf("Session %#v", session)
 
 			// Set user as authenticated
 			session.Values["authenticated-user"] = userName
@@ -242,6 +242,7 @@ func getLoggedInUserName(r *http.Request) string {
 
 func isLoggedIn(r *http.Request) bool {
 	session, err := cookieStore.Get(r, sessionName)
+	log.Printf("Session %#v\n", session)
 	if err != nil {
 		log.Printf("Couldn't get session : %v", err)
 		return false
