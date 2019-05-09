@@ -7,7 +7,7 @@
 
 	<div>
 
-	    <form method="post">
+	    <form id="form" method="post">
 		
 		<table>
 
@@ -30,7 +30,14 @@
 		    </tr>
 
 		    <tr>
-			<td colspan="2" align="right">
+			<td></td>
+			<td>
+			    <input id="password2" type="password" placeholder="Repeat password" name="password2" required>
+			</td>
+		    </tr>
+
+		    <tr>
+			<td colspan="3" align="right">
 			    <input id="token" type="text" name="token" hidden required/>
 			    <button type="submit">Register</button>
 			</td>
@@ -38,17 +45,41 @@
 		    
 		</table>
 
-	    </form>	    
+	    </form>
+
+	    <ul style="list-style: none;" id="errors"/>
 	    
 	</div>
 
-	<script>
+	<script>	 
 	 var url = new URL(document.URL);
 	 var token = url.searchParams.get("token");
 	 document.getElementById("token").value = token;
 	 //console.log("Parsed token: " + document.getElementById("token").value);
-
 	 document.getElementById("username").focus();
+
+	 document.getElementById('form').onsubmit = function() {
+	     let result = true
+	     if(document.getElementById('password').value != document.getElementById('password2').value) {
+		 const li = document.createElement("li");
+		 li.innerText = "Passwords do not match"
+		 document.getElementById('errors').appendChild(li);
+		 result = false;
+	     }
+	     if (document.getElementById('username').value.length < 5) {
+		 const li = document.createElement("li");
+		 li.innerText = "Username too short"
+		 document.getElementById('errors').appendChild(li);
+		 result = false;
+	     }
+	     if (document.getElementById('password').value.length < 5) {
+		 const li = document.createElement("li");
+		 li.innerText = "Password too short"
+		 document.getElementById('errors').appendChild(li);
+		 result = false;
+	     }
+	     return result
+	 };
 	</script>
 
     </body>

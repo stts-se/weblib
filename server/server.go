@@ -102,7 +102,8 @@ func main() {
 	r := mux.NewRouter()
 	r.StrictSlash(true)
 
-	r.HandleFunc("/", authUser(message("Hello, you are logged in as user ${username}!"), message("Hello, you are not logged in.")))
+	//r.HandleFunc("/", authUser(message("Hello, you are logged in as user ${username}!"), message("Hello, you are not logged in.")))
+	r.HandleFunc("/", helloWorld)
 	r.Use(logging)
 
 	r.HandleFunc("/doc/", generateDoc)

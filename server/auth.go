@@ -13,7 +13,7 @@ import (
 	"github.com/gorilla/sessions"
 )
 
-var sessionName = "auth-user-session"
+var sessionName = "auth-user-weblib"
 
 func parseForm(r *http.Request, requiredParams []string) (map[string]string, bool) {
 	res := make(map[string]string)
@@ -47,14 +47,6 @@ func login(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "static/auth/login.html")
 		return
 	case "POST":
-		session, _ := cookieStore.Get(r, sessionName)
-
-		session.Options = &sessions.Options{
-			Path:     "/",
-			MaxAge:   86400 * 7, // one week
-			HttpOnly: true,
-		}
-
 		form, ok := parseForm(r, []string{"username", "password"})
 		userName := form["username"]
 		password := form["password"]
@@ -69,6 +61,21 @@ func login(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if ok {
+			session, err := cookieStore.Get(r, sessionName)
+			if err != nil {
+				log.Printf("Couldn't get session : %v", err)
+				http.Error(w, "Internal server error", http.StatusInternalServerError)
+				return
+			}
+
+			session.Options = &sessions.Options{
+				Path:     "/",
+				MaxAge:   86400 * 7, // one week
+				HttpOnly: true,
+			}
+
+			log.Printf("Session %v", session)
+
 			// Set user as authenticated
 			session.Values["authenticated-user"] = userName
 			session.Save(r, w)
@@ -98,7 +105,7 @@ var invitations = invitationHolder{
 }
 
 func genRandomString(length int) string {
-	chars := []rune("ABCDEFGHJKLMNPQRSTUVWXYZ" + "abcdefghijkmnopqrstuvwxyz" + "123456789()_")
+	chars := []rune("ABCDEFGHJKLMNPQRSTUVWXYZ" + "abcdefghijkmnopqrstuvwxyz" + "123456789_")
 	var b strings.Builder
 	for i := 0; i < length; i++ {
 		b.WriteRune(chars[rand.Intn(len(chars))])
@@ -202,19 +209,31 @@ func logout(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "static/auth/logout.html")
 		return
 	case "POST":
-		session, _ := cookieStore.Get(r, sessionName)
+		session, err := cookieStore.Get(r, sessionName)
+		if err != nil {
+			log.Printf("Couldn't get session : %v", err)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+		userName := session.Values["authenticated-user"]
+
 		// Revoke users authentication
 		session.Values["authenticated-user"] = ""
+		session.Options.MaxAge = -1
 		session.Save(r, w)
-		log.Printf("Logged out successfully")
-		fmt.Fprintf(w, "Logged out successfully\n")
+		log.Printf("User %s logged out successfully", userName)
+		fmt.Fprintf(w, "Logged out user %s successfully\n", userName)
 	default:
 		http.NotFound(w, r)
 	}
 }
 
 func getLoggedInUserName(r *http.Request) string {
-	session, _ := cookieStore.Get(r, sessionName)
+	session, err := cookieStore.Get(r, sessionName)
+	if err != nil {
+		log.Printf("Couldn't get session : %v", err)
+		return ""
+	}
 	if auth, ok := session.Values["authenticated-user"].(string); ok {
 		return auth
 	}
@@ -222,7 +241,11 @@ func getLoggedInUserName(r *http.Request) string {
 }
 
 func isLoggedIn(r *http.Request) bool {
-	session, _ := cookieStore.Get(r, sessionName)
+	session, err := cookieStore.Get(r, sessionName)
+	if err != nil {
+		log.Printf("Couldn't get session : %v", err)
+		return false
+	}
 	if auth, ok := session.Values["authenticated-user"].(string); ok && auth != "" {
 		return true
 	}
