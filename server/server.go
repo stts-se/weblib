@@ -102,24 +102,26 @@ func main() {
 	r := mux.NewRouter()
 	r.StrictSlash(true)
 
-	r.HandleFunc("/", authUser(message("Hello, you are logged in!"), message("Hello, you are not logged in!")))
+	r.HandleFunc("/", authUser(message("Hello, you are logged in!"), message("Hello, you are not logged in.")))
+	r.Use(logging)
 
 	r.HandleFunc("/doc/", generateDoc)
 
 	authR := r.PathPrefix("/auth").Subrouter()
 	authR.HandleFunc("/", message("User authorization"))
-	authR.HandleFunc("/login", authUser(pageNotFound(), login))
-	authR.HandleFunc("/logout", authUser(logout, pageNotFound()))
-	authR.HandleFunc("/invite", authUser(invite, pageNotFound()))
-	authR.HandleFunc("/signup/{token}", signup)
+	authR.HandleFunc("/login", authUser(message("You are already logged in"), login))
+	authR.HandleFunc("/logout", authUser(logout, http.NotFound))
+	authR.HandleFunc("/invite", authUser(invite, http.NotFound))
+	authR.HandleFunc("/signup", signup)
 
 	protectedR := r.PathPrefix("/protected").Subrouter()
+	protectedR.Use(loggedIn)
 	protectedR.HandleFunc("/", message("Protected area"))
-	protectedR.HandleFunc("/list_users", authUser(listUsers, pageNotFound()))
+	protectedR.HandleFunc("/list_users", listUsers)
 
 	// TODO: Divide into different access rights something like this for each user level (admin, user, etc)
 	// adminR := protectedR.PathPrefix("/admin").Subrouter()
-	// adminR.HandleFunc("/list_users", authUser(listUsers, pageNotFound()))
+	// adminR.HandleFunc("/list_users", authUser(listUsers, http.NotFound))
 
 	// List route URLs to use as simple on-line documentation
 	docs := make(map[string]string)
@@ -135,6 +137,8 @@ func main() {
 		return nil
 	})
 	r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("static/"))))
+	//r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("static"))))
+	//r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(staticFolder))))
 
 	serverProtocol = "http"
 	if tlsEnabled {

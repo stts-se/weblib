@@ -1,0 +1,54 @@
+<html>
+
+    <head>
+	<script>
+	 function parseToken() {
+	     var url = new URL(document.URL);
+	     var token = url.searchParams.get("token");
+	     console.log("PARSED TOKEN :"  + token);
+	     return token;	 }
+	</script>
+    </head>
+
+    <body>
+
+	<div>
+
+	    <form method="post">
+	    
+	    <table>
+
+		<tr>
+		    <td>
+			<label for="username">Username</label>
+		    </td>
+		    <td>
+			<input id="username" type="text" placeholder="Enter username" name="username" required>
+		    </td>
+		</tr>
+
+		<tr>
+		    <td>
+			<label for="password">Password</label>
+		    </td>
+		    <td>
+			<input id="password" type="password" placeholder="Enter password" name="password" required">
+		    </td>
+		</tr>
+
+		<tr>
+		    <td colspan="2" align="right">
+			<input type="hidden" id="token"><script>parseToken()</script></input>
+		    <button type="submit">Login</button>
+		    </td>
+		</tr>
+		
+	    </table>
+
+	    </form>	    
+	    
+	</div>
+
+    </body>
+    
+</html>

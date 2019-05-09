@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 )
 
@@ -17,13 +18,16 @@ func httpError(httpStatusCode int) http.HandlerFunc {
 	}
 }
 
-func pageNotFound() http.HandlerFunc {
-	return httpError(http.StatusNotFound)
-}
-
 func listUsers(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Users\n")
 	for _, uName := range userDB.GetUsers() {
 		fmt.Fprintf(w, "- %s\n", uName)
 	}
+}
+
+func logging(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%v", r.RequestURI)
+		next.ServeHTTP(w, r)
+	})
 }

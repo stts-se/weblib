@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 	"log"
-	//	"math/rand"
+	"math/rand"
 	"net/http"
-	//	"strings"
+	"strings"
 	"sync"
 	"time"
 
@@ -15,39 +15,74 @@ import (
 
 var sessionName = "auth-user-session"
 
+func parseForm(r *http.Request, requiredParams []string) (map[string]string, bool) {
+	res := make(map[string]string)
+	missing := []string{}
+	if err := r.ParseForm(); err != nil {
+		log.Printf("Couldn't parse form : %v", err)
+		return res, false
+	}
+	for _, param := range requiredParams {
+		value := r.FormValue(param)
+		if value != "" {
+			res[param] = value
+		} else {
+			missing = append(missing, param)
+		}
+	}
+	if len(missing) > 0 {
+		pluralS := "s"
+		if len(missing) == 1 {
+			pluralS = ""
+		}
+		log.Printf("Couldn't parse form : missing param%s : %v", pluralS, missing)
+	}
+	return res, true
+}
+
 func login(w http.ResponseWriter, r *http.Request) {
 
-	// should be set client side w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Basic realm="%s"`, serverAddress))
+	switch r.Method {
+	case "GET":
+		http.ServeFile(w, r, "static/auth/login.html")
+		return
+	case "POST":
+		session, _ := cookieStore.Get(r, sessionName)
 
-	session, _ := cookieStore.Get(r, sessionName)
+		session.Options = &sessions.Options{
+			Path:     "/",
+			MaxAge:   86400 * 7, // one week
+			HttpOnly: true,
+		}
 
-	session.Options = &sessions.Options{
-		Path:     "/",
-		MaxAge:   86400 * 7, // one week
-		HttpOnly: true,
-	}
+		form, ok := parseForm(r, []string{"username", "password"})
+		userName := form["username"]
+		password := form["password"]
+		if !ok {
+			http.Error(w, "Incomplete credentials", http.StatusUnauthorized)
+		}
 
-	userName, password, _ := r.BasicAuth()
-
-	if userName != "" && password != "" {
 		ok, err := userDB.Authorized(userName, password)
 		if err != nil {
 			log.Printf("Login failed : %v", err)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			http.Error(w, "Login failed", http.StatusUnauthorized)
 			return
 		}
 		if ok {
 			// Set user as authenticated
-			session.Values["authenticated"] = true
+			session.Values["authenticated"] = userName
 			session.Save(r, w)
 			log.Printf("Logged in successfully")
 			fmt.Fprintf(w, "Logged in successfully\n")
 			return
 		}
-		http.Error(w, "Login failed", http.StatusForbidden)
+		http.Error(w, "Login failed", http.StatusUnauthorized)
 		return
+
+	default:
+		http.NotFound(w, r)
 	}
-	http.Error(w, "No login credentials provided", http.StatusBadRequest)
+
 }
 
 type invitationHolder struct {
@@ -62,36 +97,43 @@ var invitations = invitationHolder{
 	maxAge: 86400 * 7, // one week in seconds
 }
 
-// func genPassword(length int) string {
-// 	chars := []rune("ABCDEFGHJKLMNPQRSTUVWXYZ" +
-// 		"abcdefghijkmnopqrstuvwxyz" +
-// 		"123456789()_")
-// 	var b strings.Builder
-// 	for i := 0; i < length; i++ {
-// 		b.WriteRune(chars[rand.Intn(len(chars))])
-// 	}
-// 	return b.String()
-// }
+func genRandomString(length int) string {
+	chars := []rune("ABCDEFGHJKLMNPQRSTUVWXYZ" + "abcdefghijkmnopqrstuvwxyz" + "123456789()_")
+	var b strings.Builder
+	for i := 0; i < length; i++ {
+		b.WriteRune(chars[rand.Intn(len(chars))])
+	}
+	return b.String()
+}
 
 func invite(w http.ResponseWriter, r *http.Request) {
 
-	token := uuid.New().String()
-	invitations.mutex.RLock()
-	defer invitations.mutex.RUnlock()
-
-	purgeInvitations()
-
-	if _, ok := invitations.tokens[token]; ok {
-		log.Printf("Token already exists : %s", token)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	switch r.Method {
+	case "GET":
+		http.ServeFile(w, r, "static/auth/invite.html")
 		return
-	}
-	invitations.tokens[token] = time.Now()
+	case "POST":
+		token := uuid.New().String()
+		invitations.mutex.RLock()
+		defer invitations.mutex.RUnlock()
 
-	link := fmt.Sprintf("%s://%s/auth/signup/%s", serverProtocol, serverAddress, token)
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	log.Printf("Created invitation link: %s", link)
-	fmt.Fprintf(w, "Invitation link: %s\n", link)
+		purgeInvitations()
+
+		if _, ok := invitations.tokens[token]; ok {
+			log.Printf("Token already exists : %s", token)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+		invitations.tokens[token] = time.Now()
+
+		link := fmt.Sprintf("%s://%s/auth/signup?token=%s", serverProtocol, serverAddress, token)
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		log.Printf("Created invitation link: %s", link)
+		fmt.Fprintf(w, "Invitation link: %s\n", link)
+	default:
+		http.NotFound(w, r)
+	}
+
 }
 
 // NB! not thread safe -- lock mutex before calling
@@ -99,16 +141,27 @@ func purgeInvitations() {
 	for token, created := range invitations.tokens {
 		if time.Since(created).Seconds() > invitations.maxAge {
 			delete(invitations.tokens, token)
-			log.Printf("Token expired: %s", token)
+			log.Printf("Expired token: %s", token)
 		}
 	}
 	log.Printf("Purged invitation db")
 }
 
 func signup(w http.ResponseWriter, r *http.Request) {
-	userName, password, _ := r.BasicAuth()
-	token := getParam("token", r)
-	if token != "" && userName != "" && password != "" {
+	//form, ok := parseForm(r, []string{"username", "password"})
+
+	switch r.Method {
+	case "GET":
+		http.ServeFile(w, r, "static/auth/signup.html")
+		return
+	case "POST":
+		form, ok := parseForm(r, []string{"username", "password"})
+		userName := form["username"]
+		password := form["password"]
+		token := form["token"]
+		if !ok {
+			http.Error(w, "Incomplete credentials", http.StatusUnauthorized)
+		}
 
 		invitations.mutex.RLock()
 		defer invitations.mutex.RUnlock()
@@ -118,51 +171,77 @@ func signup(w http.ResponseWriter, r *http.Request) {
 		// verify token
 		created, tokenExists := invitations.tokens[token]
 		if !tokenExists {
-			log.Printf("Unknown token : %s", token)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			log.Printf("Invalid token : %s", token)
+			http.Error(w, "Incomplete credentials", http.StatusUnauthorized)
 			return
 		}
 		if time.Since(created).Seconds() > invitations.maxAge {
 			delete(invitations.tokens, token)
 			log.Printf("Expired token: %s", token)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			http.Error(w, "Incomplete credentials", http.StatusUnauthorized)
 			return
 		}
 
 		err := userDB.InsertUser(userName, password)
 		if err != nil {
 			log.Printf("Signup failed : %v", err)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			http.Error(w, "Incomplete credentials", http.StatusUnauthorized)
 			return
 		}
 		delete(invitations.tokens, token)
 		log.Printf("Created used %s", userName)
 		fmt.Fprintf(w, "Created user %s\n", userName)
 		return
+
+	default:
+		http.NotFound(w, r)
 	}
-	http.Error(w, "No signup credentials provided", http.StatusBadRequest)
 }
 
 func logout(w http.ResponseWriter, r *http.Request) {
-	session, _ := cookieStore.Get(r, sessionName)
+	switch r.Method {
+	case "GET":
+		http.ServeFile(w, r, "static/auth/logout.html")
+		return
+	case "POST":
+		session, _ := cookieStore.Get(r, sessionName)
+		// Revoke users authentication
+		session.Values["authenticated"] = ""
+		session.Save(r, w)
+		log.Printf("Logged out successfully")
+		fmt.Fprintf(w, "Logged out successfully\n")
+	default:
+		http.NotFound(w, r)
+	}
+}
 
-	// Revoke users authentication
-	session.Values["authenticated"] = false
-	session.Save(r, w)
-	log.Printf("Logged out successfully")
-	fmt.Fprintf(w, "Logged out successfully\n")
+func isLoggedIn(r *http.Request) bool {
+	session, _ := cookieStore.Get(r, sessionName)
+	if auth, ok := session.Values["authenticated"].(string); ok && auth != "" {
+		return true
+	}
+	return false
+}
+
+func loggedIn(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if isLoggedIn(r) {
+			next.ServeHTTP(w, r)
+		} else {
+			http.NotFound(w, r)
+		}
+	})
 }
 
 // authUser will call authFunc if there is an authorized user; else unauthFunc will be called
 func authUser(authFunc http.HandlerFunc, unauthFunc http.HandlerFunc) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		session, _ := cookieStore.Get(r, sessionName)
-		if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
-			unauthFunc(w, r)
-		} else {
+		if isLoggedIn(r) {
 			// TODO: Check if user has access rights to the specified level
 			authFunc(w, r)
+		} else {
+			unauthFunc(w, r)
 		}
 	}
 }
