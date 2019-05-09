@@ -70,10 +70,10 @@ func login(w http.ResponseWriter, r *http.Request) {
 		}
 		if ok {
 			// Set user as authenticated
-			session.Values["authenticated"] = userName
+			session.Values["authenticated-user"] = userName
 			session.Save(r, w)
-			log.Printf("Logged in successfully")
-			fmt.Fprintf(w, "Logged in successfully\n")
+			log.Printf("User %s logged in successfully", getLoggedInUserName(r))
+			fmt.Fprintf(w, "Logged in successfully as user %s\n", getLoggedInUserName(r))
 			return
 		}
 		http.Error(w, "Login failed", http.StatusUnauthorized)
@@ -129,7 +129,7 @@ func invite(w http.ResponseWriter, r *http.Request) {
 		link := fmt.Sprintf("%s://%s/auth/signup?token=%s", serverProtocol, serverAddress, token)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		log.Printf("Created invitation link: %s", link)
-		fmt.Fprintf(w, "Invitation link: %s\n", link)
+		fmt.Fprintf(w, "Invitation link: <a href='%s'>%s</a>\n", link, link)
 	default:
 		http.NotFound(w, r)
 	}
@@ -170,20 +170,20 @@ func signup(w http.ResponseWriter, r *http.Request) {
 		created, tokenExists := invitations.tokens[token]
 		if !tokenExists {
 			log.Printf("Invalid token : %s", token)
-			http.Error(w, "Incomplete credentials", http.StatusUnauthorized)
+			http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 			return
 		}
 		if time.Since(created).Seconds() > invitations.maxAge {
 			delete(invitations.tokens, token)
 			log.Printf("Expired token: %s", token)
-			http.Error(w, "Incomplete credentials", http.StatusUnauthorized)
+			http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 			return
 		}
 
 		err := userDB.InsertUser(userName, password)
 		if err != nil {
 			log.Printf("Signup failed : %v", err)
-			http.Error(w, "Incomplete credentials", http.StatusUnauthorized)
+			http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 			return
 		}
 		delete(invitations.tokens, token)
@@ -204,7 +204,7 @@ func logout(w http.ResponseWriter, r *http.Request) {
 	case "POST":
 		session, _ := cookieStore.Get(r, sessionName)
 		// Revoke users authentication
-		session.Values["authenticated"] = ""
+		session.Values["authenticated-user"] = ""
 		session.Save(r, w)
 		log.Printf("Logged out successfully")
 		fmt.Fprintf(w, "Logged out successfully\n")
@@ -213,9 +213,17 @@ func logout(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func getLoggedInUserName(r *http.Request) string {
+	session, _ := cookieStore.Get(r, sessionName)
+	if auth, ok := session.Values["authenticated-user"].(string); ok {
+		return auth
+	}
+	return ""
+}
+
 func isLoggedIn(r *http.Request) bool {
 	session, _ := cookieStore.Get(r, sessionName)
-	if auth, ok := session.Values["authenticated"].(string); ok && auth != "" {
+	if auth, ok := session.Values["authenticated-user"].(string); ok && auth != "" {
 		return true
 	}
 	return false

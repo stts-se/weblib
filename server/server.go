@@ -102,14 +102,14 @@ func main() {
 	r := mux.NewRouter()
 	r.StrictSlash(true)
 
-	r.HandleFunc("/", authUser(message("Hello, you are logged in!"), message("Hello, you are not logged in.")))
+	r.HandleFunc("/", authUser(message("Hello, you are logged in as user ${username}!"), message("Hello, you are not logged in.")))
 	r.Use(logging)
 
 	r.HandleFunc("/doc/", generateDoc)
 
 	authR := r.PathPrefix("/auth").Subrouter()
 	authR.HandleFunc("/", message("User authorization"))
-	authR.HandleFunc("/login", authUser(message("You are already logged in"), login))
+	authR.HandleFunc("/login", authUser(message("You are already logged in as user ${username}"), login))
 	authR.HandleFunc("/logout", authUser(logout, http.NotFound))
 	authR.HandleFunc("/invite", authUser(invite, http.NotFound))
 	authR.HandleFunc("/signup", signup)

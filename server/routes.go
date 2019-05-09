@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 )
 
 func message(msg string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		msg = strings.Replace(msg, "${username}", getLoggedInUserName(r), -1)
 		fmt.Fprintf(w, "%s\n", msg)
 	}
 }
