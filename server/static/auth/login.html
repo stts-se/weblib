@@ -8,38 +8,42 @@
 	<div>
 
 	    <form method="post">
-	    
-	    <table>
-
-		<tr>
-		    <td>
-			<label for="username">Username</label>
-		    </td>
-		    <td>
-			<input id="username" type="text" placeholder="Enter username" name="username" required>
-		    </td>
-		</tr>
-
-		<tr>
-		    <td>
-			<label for="password">Password</label>
-		    </td>
-		    <td>
-			<input id="password" type="password" placeholder="Enter password" name="password" required">
-		    </td>
-		</tr>
-
-		<tr>
-		    <td colspan="2" align="right">
-			<button type="submit">Login</button>
-		    </td>
-		</tr>
 		
-	    </table>
+		<table>
+
+		    <tr>
+			<td>
+			    <label for="username">Username</label>
+			</td>
+			<td>
+			    <input id="username" type="text" placeholder="Enter username" name="username" required>
+			</td>
+		    </tr>
+
+		    <tr>
+			<td>
+			    <label for="password">Password</label>
+			</td>
+			<td>
+			    <input id="password" type="password" placeholder="Enter password" name="password" required">
+			</td>
+		    </tr>
+
+		    <tr>
+			<td colspan="2" align="right">
+			    <button type="submit">Login</button>
+			</td>
+		    </tr>
+		    
+		</table>
 
 	    </form>	    
 	    
 	</div>
+
+	<script>
+	 document.getElementById("username").focus();
+	</script>
 
     </body>
     
