@@ -148,14 +148,12 @@ func purgeInvitations() {
 }
 
 func signup(w http.ResponseWriter, r *http.Request) {
-	//form, ok := parseForm(r, []string{"username", "password"})
-
 	switch r.Method {
 	case "GET":
 		http.ServeFile(w, r, "static/auth/signup.html")
 		return
 	case "POST":
-		form, ok := parseForm(r, []string{"username", "password"})
+		form, ok := parseForm(r, []string{"username", "password", "token"})
 		userName := form["username"]
 		password := form["password"]
 		token := form["token"]
