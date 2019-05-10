@@ -32,7 +32,7 @@ func (i *invitations) purge() {
 	log.Printf("Purged invitation db")
 }
 
-// Auth holds an authorization handler using a user database along with sessions and cookies
+// Auth : authentication management, using a user database along with sessions and cookies
 type Auth struct {
 	sessionName string
 	userDB      *userdb.UserDB
