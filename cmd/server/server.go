@@ -92,7 +92,7 @@ func main() {
 
 	auth := server.NewAuth("auth-user-weblib", userDB, cookieStore)
 	fullURL := fmt.Sprintf("%s://%s", protocol, address)
-	authHandlers := AuthHandlers{serverURL: fullURL, auth: &auth}
+	authHandlers := AuthHandlers{ServerURL: fullURL, Auth: &auth}
 
 	r := mux.NewRouter()
 	r.StrictSlash(true)

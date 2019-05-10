@@ -10,14 +10,14 @@ import (
 )
 
 type AuthHandlers struct {
-	serverURL string
-	auth      *server.Auth
+	ServerURL string
+	Auth      *server.Auth
 }
 
 func (a *AuthHandlers) helloWorld(w http.ResponseWriter, r *http.Request) {
 	var msg string
-	if a.auth.IsLoggedIn(r) {
-		msg = fmt.Sprintf("Hello, you are logged in as user %s!", a.auth.GetLoggedInUserName(r))
+	if a.Auth.IsLoggedIn(r) {
+		msg = fmt.Sprintf("Hello, you are logged in as user %s!", a.Auth.GetLoggedInUserName(r))
 	} else {
 		msg = "Hello, you are not logged in."
 	}
@@ -26,7 +26,7 @@ func (a *AuthHandlers) helloWorld(w http.ResponseWriter, r *http.Request) {
 
 func (a *AuthHandlers) message(msg string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		msg = strings.Replace(msg, "${username}", a.auth.GetLoggedInUserName(r), -1)
+		msg = strings.Replace(msg, "${username}", a.Auth.GetLoggedInUserName(r), -1)
 		fmt.Fprintf(w, "%s\n", msg)
 	}
 }
@@ -37,14 +37,14 @@ func (a *AuthHandlers) login(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "static/auth/login.html")
 		return
 	case "POST":
-		form, ok := parseForm(r, []string{"username", "password"})
+		form, ok := server.ParseForm(r, []string{"username", "password"})
 		userName := form["username"]
 		password := form["password"]
 		if !ok {
 			http.Error(w, "Incomplete credentials", http.StatusUnauthorized)
 		}
 
-		err := a.auth.Login(w, r, userName, password)
+		err := a.Auth.Login(w, r, userName, password)
 		if err != nil {
 			log.Printf("Login failed : %v", err)
 			http.Error(w, "Login failed", http.StatusUnauthorized)
@@ -66,14 +66,14 @@ func (a *AuthHandlers) invite(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "static/auth/invite.html")
 		return
 	case "POST":
-		token, err := a.auth.CreateSingleUseToken()
+		token, err := a.Auth.CreateSingleUseToken()
 		if err != nil {
 			log.Printf("Couldn't create invitation token : %s", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
 
-		link := fmt.Sprintf("%s/auth/signup?token=%s", a.serverURL, token)
+		link := fmt.Sprintf("%s/auth/signup?token=%s", a.ServerURL, token)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		log.Printf("Created invitation link: %s", link)
 		fmt.Fprintf(w, "Invitation link: <a href='%s'>%s</a>\n", link, link)
@@ -88,7 +88,7 @@ func (a *AuthHandlers) signup(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "static/auth/signup.html")
 		return
 	case "POST":
-		form, ok := parseForm(r, []string{"username", "password", "token"})
+		form, ok := server.ParseForm(r, []string{"username", "password", "token"})
 		userName := form["username"]
 		password := form["password"]
 		token := form["token"]
@@ -96,7 +96,7 @@ func (a *AuthHandlers) signup(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Incomplete credentials", http.StatusUnauthorized)
 		}
 
-		err := a.auth.SignupUser(userName, password, token)
+		err := a.Auth.SignupUser(userName, password, token)
 		if err != nil {
 			log.Printf("Couldn't create user : %s", err)
 			http.Error(w, "Internal server error", http.StatusUnauthorized)
@@ -117,7 +117,7 @@ func (a *AuthHandlers) logout(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "static/auth/logout.html")
 		return
 	case "POST":
-		userName, err := a.auth.Logout(w, r)
+		userName, err := a.Auth.Logout(w, r)
 		if err != nil {
 			log.Printf("Couldn't logout : %s", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -133,7 +133,7 @@ func (a *AuthHandlers) logout(w http.ResponseWriter, r *http.Request) {
 
 func (a *AuthHandlers) listUsers(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Users\n")
-	for _, uName := range a.auth.ListUsers() {
+	for _, uName := range a.Auth.ListUsers() {
 		fmt.Fprintf(w, "- %s\n", uName)
 	}
 }
