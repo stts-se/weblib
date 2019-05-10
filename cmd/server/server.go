@@ -86,6 +86,7 @@ func main() {
 	}
 
 	userDB, err := initUserDB(*userDBFile)
+
 	if err != nil {
 		log.Fatalf("UserDB init failed : %v", err)
 	}

@@ -11,26 +11,44 @@ import (
 	"strings"
 
 	"github.com/gorilla/sessions"
-	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/stts-se/weblib/userdb"
 )
-
-func promptPassword() (string, error) {
-	bytePassword, err := terminal.ReadPassword(0)
-	fmt.Println()
-	if err != nil {
-		return "", err
-	}
-	password := string(bytePassword)
-	return password, nil
-}
 
 func fileExists(fileName string) bool {
 	if _, err := os.Stat(fileName); os.IsNotExist(err) {
 		return false
 	}
 	return true
+}
+
+func initUserDB(dbFile string) (*userdb.UserDB, error) {
+	var constraints = func(userName, password string) (bool, string) {
+		if len(userName) == 0 {
+			return false, "empty user name"
+		}
+		if len(userName) < 4 {
+			return false, "username must have min 4 chars"
+		}
+		if len(password) == 0 {
+			return false, "empty password"
+		}
+		if len(password) < 4 {
+			return false, "password must have min 4 chars"
+		}
+		return true, ""
+	}
+
+	userDB, err := userdb.ReadUserDB(dbFile)
+	if err != nil {
+		return &userDB, fmt.Errorf("couldn't read user db : %v", err)
+	}
+	userDB.Constraints = constraints
+	err = userDB.SaveFile()
+	if err != nil {
+		return &userDB, fmt.Errorf("couldn't save user db : %v", err)
+	}
+	return &userDB, nil
 }
 
 func initCookieStore(keyFile string) (*sessions.CookieStore, error) {
@@ -87,71 +105,4 @@ func initCookieStore(keyFile string) (*sessions.CookieStore, error) {
 	}
 	cs = sessions.NewCookieStore([]byte(key))
 	return cs, nil
-}
-
-func initUserDB(dbFile string) (*userdb.UserDB, error) {
-	userDB, err := userdb.ReadUserDB(dbFile)
-	if err != nil {
-		return &userDB, fmt.Errorf("couldn't read user db : %v", err)
-	}
-	userDB.Constraints = func(userName, password string) (bool, string) {
-		if len(userName) == 0 {
-			return false, "empty user name"
-		}
-		if len(userName) < 4 {
-			return false, "username must have min 4 chars"
-		}
-		if len(password) == 0 {
-			return false, "empty password"
-		}
-		if len(password) < 4 {
-			return false, "password must have min 4 chars"
-		}
-		return true, ""
-	}
-
-	if len(userDB.GetUsers()) == 0 {
-		reader := bufio.NewReader(os.Stdin)
-		fmt.Println("Empty user db. Create new user? (Ctrl-c to exit)")
-		for {
-			fmt.Printf("Username: ")
-			userName, err := reader.ReadString('\n')
-			if err != nil {
-				return &userDB, err
-			}
-
-			fmt.Printf("Password: ")
-			password, err := promptPassword()
-			if err != nil {
-				return &userDB, err
-			}
-			fmt.Printf("Repeat password: ")
-			passwordCheck, err := promptPassword()
-			if err != nil {
-				return &userDB, err
-			}
-			if password != passwordCheck {
-				return &userDB, fmt.Errorf("Passwords do not match")
-			}
-			err = userDB.InsertUser(userName, password)
-			if err != nil {
-				return &userDB, err
-			}
-			log.Printf("Created user %s", userName)
-			fmt.Printf("Create another user? [Y/n] ")
-			r, err := reader.ReadString('\n')
-			if err != nil {
-				return &userDB, err
-			}
-			r = strings.ToLower(strings.TrimSpace(r))
-			if len(r) > 0 && !strings.HasPrefix(r, "y") {
-				break
-			}
-		}
-	}
-	err = userDB.SaveFile()
-	if err != nil {
-		return &userDB, fmt.Errorf("couldn't save user db : %v", err)
-	}
-	return &userDB, nil
 }
