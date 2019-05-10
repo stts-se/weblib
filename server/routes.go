@@ -39,7 +39,6 @@ func listUsers(w http.ResponseWriter, r *http.Request) {
 
 func logging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		//log.Printf("%v", r.RequestURI)
 		log.Printf("Request: %v", r)
 		next.ServeHTTP(w, r)
 	})

@@ -80,6 +80,7 @@ func main() {
 	}
 
 	tlsEnabled := false
+	serverProtocol = "http"
 	if *tlsCert != "" && *tlsKey != "" {
 		tlsEnabled = true
 	}
@@ -87,6 +88,9 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Usage: server <options>\n")
 		flag.PrintDefaults()
 		os.Exit(1)
+	}
+	if tlsEnabled {
+		serverProtocol = "https"
 	}
 
 	cookieStore, err = initCookieStore(*serverKeyFile)
@@ -141,10 +145,6 @@ func main() {
 	//r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("static"))))
 	//r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(staticFolder))))
 
-	serverProtocol = "http"
-	if tlsEnabled {
-		serverProtocol = "https"
-	}
 	serverAddress = fmt.Sprintf("%s:%v", *host, *port)
 	srv := &http.Server{
 		Handler:      r,

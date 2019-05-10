@@ -133,6 +133,7 @@ func invite(w http.ResponseWriter, r *http.Request) {
 		}
 		invitations.tokens[token] = time.Now()
 
+		//link := fmt.Sprintf("%s://%s/auth/signup?token=%s", r.URL.Scheme, r.Host, token)
 		link := fmt.Sprintf("%s://%s/auth/signup?token=%s", serverProtocol, serverAddress, token)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		log.Printf("Created invitation link: %s", link)
