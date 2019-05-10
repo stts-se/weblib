@@ -100,7 +100,7 @@ func main() {
 	r.Use(logging)
 
 	r.HandleFunc("/", authHandlers.helloWorld)
-	r.HandleFunc("/doc/", simpleDoc(r))
+	r.HandleFunc("/doc/", simpleDoc(r, make(map[string]string)))
 
 	authR := r.PathPrefix("/auth").Subrouter()
 	authR.HandleFunc("/", message("User authorization"))

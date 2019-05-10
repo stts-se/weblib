@@ -28,7 +28,7 @@ func logging(next http.Handler) http.Handler {
 	})
 }
 
-func simpleDoc(router *mux.Router) http.HandlerFunc {
+func simpleDoc(router *mux.Router, docInfo map[string]string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		walkedURLs := []string{}
 		printedURLs := make(map[string]bool)
@@ -41,9 +41,9 @@ func simpleDoc(router *mux.Router) http.HandlerFunc {
 				u = strings.TrimSuffix(u, "/")
 			}
 			doc := u
-			// if info, ok := docs[t]; ok {
-			// doc = fmt.Sprintf("%s - %s", u, info)
-			// }
+			if info, ok := docInfo[u]; ok {
+				doc = fmt.Sprintf("%s - %s", u, info)
+			}
 			if _, printed := printedURLs[u]; !printed {
 				printedURLs[u] = true
 				walkedURLs = append(walkedURLs, doc)
