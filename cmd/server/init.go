@@ -89,10 +89,10 @@ func initCookieStore(keyFile string) (*sessions.CookieStore, error) {
 	return cs, nil
 }
 
-func initDB(dbFile string) (userdb.UserDB, error) {
+func initUserDB(dbFile string) (*userdb.UserDB, error) {
 	userDB, err := userdb.ReadUserDB(dbFile)
 	if err != nil {
-		return userDB, fmt.Errorf("couldn't read user db : %v", err)
+		return &userDB, fmt.Errorf("couldn't read user db : %v", err)
 	}
 	userDB.Constraints = func(userName, password string) (bool, string) {
 		if len(userName) == 0 {
@@ -117,31 +117,31 @@ func initDB(dbFile string) (userdb.UserDB, error) {
 			fmt.Printf("Username: ")
 			userName, err := reader.ReadString('\n')
 			if err != nil {
-				return userDB, err
+				return &userDB, err
 			}
 
 			fmt.Printf("Password: ")
 			password, err := promptPassword()
 			if err != nil {
-				return userDB, err
+				return &userDB, err
 			}
 			fmt.Printf("Repeat password: ")
 			passwordCheck, err := promptPassword()
 			if err != nil {
-				return userDB, err
+				return &userDB, err
 			}
 			if password != passwordCheck {
-				return userDB, fmt.Errorf("Passwords do not match")
+				return &userDB, fmt.Errorf("Passwords do not match")
 			}
 			err = userDB.InsertUser(userName, password)
 			if err != nil {
-				return userDB, err
+				return &userDB, err
 			}
 			log.Printf("Created user %s", userName)
 			fmt.Printf("Create another user? [Y/n] ")
 			r, err := reader.ReadString('\n')
 			if err != nil {
-				return userDB, err
+				return &userDB, err
 			}
 			r = strings.ToLower(strings.TrimSpace(r))
 			if len(r) > 0 && !strings.HasPrefix(r, "y") {
@@ -151,7 +151,7 @@ func initDB(dbFile string) (userdb.UserDB, error) {
 	}
 	err = userDB.SaveFile()
 	if err != nil {
-		return userDB, fmt.Errorf("couldn't save user db : %v", err)
+		return &userDB, fmt.Errorf("couldn't save user db : %v", err)
 	}
-	return userDB, nil
+	return &userDB, nil
 }
