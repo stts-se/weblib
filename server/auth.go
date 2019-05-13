@@ -15,29 +15,29 @@ import (
 	"github.com/stts-se/weblib/userdb"
 )
 
-type invitations struct {
+type singleUseTokens struct {
 	mutex  *sync.RWMutex
 	tokens map[string]time.Time
 	maxAge float64 // max age in seconds
 }
 
 // NB! not thread safe -- lock mutex before calling
-func (i *invitations) purge() {
-	for token, created := range i.tokens {
-		if time.Since(created).Seconds() > i.maxAge {
-			delete(i.tokens, token)
+func (sit *singleUseTokens) purge() {
+	for token, created := range sit.tokens {
+		if time.Since(created).Seconds() > sit.maxAge {
+			delete(sit.tokens, token)
 			log.Printf("Expired token: %s", token)
 		}
 	}
-	log.Printf("Purged invitation db")
+	log.Printf("Purged single use tokens db")
 }
 
 // Auth : authentication management, using a user database along with sessions and cookies
 type Auth struct {
-	sessionName string
-	userDB      *userdb.UserDB
-	cookieStore *sessions.CookieStore
-	invitations invitations
+	sessionName     string
+	userDB          *userdb.UserDB
+	cookieStore     *sessions.CookieStore
+	singleUseTokens singleUseTokens
 }
 
 // NewAuth create a new Auth instance
@@ -46,7 +46,7 @@ func NewAuth(sessionName string, userDB *userdb.UserDB, cookieStore *sessions.Co
 		sessionName: sessionName,
 		userDB:      userDB,
 		cookieStore: cookieStore,
-		invitations: invitations{
+		singleUseTokens: singleUseTokens{
 			mutex:  &sync.RWMutex{},
 			tokens: make(map[string]time.Time),
 			maxAge: 86400 * 7, // one week in seconds
@@ -86,37 +86,37 @@ func (a *Auth) Login(w http.ResponseWriter, r *http.Request, userName, password 
 // CreateSingleUseToken creates a single use token, useful for signup invitations
 func (a *Auth) CreateSingleUseToken() (string, error) {
 	token := uuid.New().String()
-	a.invitations.mutex.RLock()
-	defer a.invitations.mutex.RUnlock()
+	a.singleUseTokens.mutex.RLock()
+	defer a.singleUseTokens.mutex.RUnlock()
 
-	a.invitations.purge()
+	a.singleUseTokens.purge()
 
-	if _, ok := a.invitations.tokens[token]; ok {
+	if _, ok := a.singleUseTokens.tokens[token]; ok {
 		err := fmt.Errorf("token already exists: %s", token)
 		log.Println(err)
 		//http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return "", err
 	}
-	a.invitations.tokens[token] = time.Now()
+	a.singleUseTokens.tokens[token] = time.Now()
 	return token, nil
 }
 
 // SignupUser creates a new user with the specified userName and password, using the specified token. If the signup is successful, the token will be consumed.
 func (a *Auth) SignupUser(userName, password, singleUseToken string) error {
-	a.invitations.mutex.RLock()
-	defer a.invitations.mutex.RUnlock()
+	a.singleUseTokens.mutex.RLock()
+	defer a.singleUseTokens.mutex.RUnlock()
 
-	a.invitations.purge()
+	a.singleUseTokens.purge()
 
 	// verify token
-	created, tokenExists := a.invitations.tokens[singleUseToken]
+	created, tokenExists := a.singleUseTokens.tokens[singleUseToken]
 	if !tokenExists {
 		err := fmt.Errorf("invalid token : %s", singleUseToken)
 		log.Println(err)
 		return err
 	}
-	if time.Since(created).Seconds() > a.invitations.maxAge {
-		delete(a.invitations.tokens, singleUseToken)
+	if time.Since(created).Seconds() > a.singleUseTokens.maxAge {
+		delete(a.singleUseTokens.tokens, singleUseToken)
 		err := fmt.Errorf("expired token: %s", singleUseToken)
 		log.Println(err)
 		return err
@@ -128,7 +128,7 @@ func (a *Auth) SignupUser(userName, password, singleUseToken string) error {
 		log.Println(err)
 		return err
 	}
-	delete(a.invitations.tokens, singleUseToken)
+	delete(a.singleUseTokens.tokens, singleUseToken)
 	//log.Printf("Created used %s", userName)
 	return nil
 }
