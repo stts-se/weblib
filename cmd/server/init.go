@@ -51,6 +51,35 @@ func initUserDB(dbFile string) (*userdb.UserDB, error) {
 	return &userDB, nil
 }
 
+func initRoleDB(dbFile string) (*userdb.RoleDB, error) {
+	var constraints = func(userName, role string) (bool, string) {
+		if len(userName) == 0 {
+			return false, "empty user name"
+		}
+		if len(userName) < 4 {
+			return false, "username must have min 4 chars"
+		}
+		if len(role) == 0 {
+			return false, "empty role"
+		}
+		if len(role) < 4 {
+			return false, "role must have min 4 chars"
+		}
+		return true, ""
+	}
+
+	roleDB, err := userdb.ReadRoleDB(dbFile)
+	if err != nil {
+		return &roleDB, fmt.Errorf("couldn't read role db : %v", err)
+	}
+	roleDB.Constraints = constraints
+	err = roleDB.SaveFile()
+	if err != nil {
+		return &roleDB, fmt.Errorf("couldn't save role db : %v", err)
+	}
+	return &roleDB, nil
+}
+
 func initCookieStore(keyFile string) (*sessions.CookieStore, error) {
 	var cs *sessions.CookieStore
 	var key []byte

@@ -44,7 +44,8 @@ func main() {
 	host := flag.String("host", "127.0.0.1", "server host")
 	port := flag.Int("port", 7932, "server port")
 	serverKeyFile := flag.String("key", "server_config/serverkey", "server key file for session cookies")
-	userDBFile := flag.String("db", "userdb.txt", "user database")
+	userDBFile := flag.String("u", "userdb.txt", "user database")
+	roleDBFile := flag.String("r", "roles.txt", "role database")
 	help := flag.Bool("h", false, "print usage and exit")
 
 	// go run /usr/local/go/src/crypto/tls/generate_cert.go
@@ -86,12 +87,13 @@ func main() {
 	}
 
 	userDB, err := initUserDB(*userDBFile)
+	roleDB, err := initRoleDB(*roleDBFile)
 
 	if err != nil {
 		log.Fatalf("UserDB init failed : %v", err)
 	}
 
-	auth := server.NewAuth("auth-user-weblib", userDB, cookieStore)
+	auth := server.NewAuth("auth-user-weblib", userDB, roleDB, cookieStore)
 	fullURL := fmt.Sprintf("%s://%s", protocol, address)
 	authHandlers := AuthHandlers{ServerURL: fullURL, Auth: &auth}
 
@@ -106,13 +108,17 @@ func main() {
 	authR.HandleFunc("/", message("User authorization"))
 	authR.HandleFunc("/login", auth.ServeAuthUserOrElse(authHandlers.message("You are already logged in as user ${username}"), authHandlers.login))
 	authR.HandleFunc("/logout", auth.ServeAuthUser(authHandlers.logout))
-	authR.HandleFunc("/invite", auth.ServeAuthUser(authHandlers.invite))
 	authR.HandleFunc("/signup", authHandlers.signup)
 
 	protectedR := r.PathPrefix("/protected").Subrouter()
-	protectedR.Use(auth.RequireAuthUser)
+	auth.RequireAuthUser(protectedR)
 	protectedR.HandleFunc("/", message("Protected area"))
 	protectedR.HandleFunc("/list_users", authHandlers.listUsers)
+
+	adminR := r.PathPrefix("/admin").Subrouter()
+	auth.RequireAuthRole(adminR, "admin")
+	adminR.HandleFunc("/", message("Admin area"))
+	adminR.HandleFunc("/invite", authHandlers.invite)
 
 	r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("static/"))))
 

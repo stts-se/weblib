@@ -49,10 +49,10 @@ func EmptyUserDB(fileName string) (UserDB, error) {
 
 // ReadUserDB reads a user db from file
 func ReadUserDB(fileName string) (UserDB, error) {
-	return readFile(fileName)
+	return readUsersFile(fileName)
 }
 
-func normalise(userName string) string {
+func normaliseUserName(userName string) string {
 	return strings.TrimSpace(strings.ToLower(userName))
 }
 
@@ -75,7 +75,7 @@ func (udb UserDB) GetUsers() []string {
 func (udb UserDB) UserExists(userName string) (string, bool) {
 	udb.mutex.RLock()
 	defer udb.mutex.RUnlock()
-	userName = normalise(userName)
+	userName = normaliseUserName(userName)
 
 	_, exists := udb.users[userName]
 
@@ -89,7 +89,7 @@ func (udb UserDB) GetPasswordHash(userName string) (string, error) {
 
 	udb.mutex.RLock()
 	defer udb.mutex.RUnlock()
-	userName = normalise(userName)
+	userName = normaliseUserName(userName)
 
 	hash, ok := udb.users[userName]
 	if !ok {
@@ -102,7 +102,7 @@ func (udb UserDB) GetPasswordHash(userName string) (string, error) {
 func (udb UserDB) InsertUser(userName, password string) error {
 	udb.mutex.Lock()
 	defer udb.mutex.Unlock()
-	userName = normalise(userName)
+	userName = normaliseUserName(userName)
 
 	if ok, msg := udb.Constraints(userName, password); !ok {
 		return fmt.Errorf("constraints failed: %s", msg)
@@ -128,7 +128,7 @@ func (udb UserDB) InsertUser(userName, password string) error {
 func (udb UserDB) DeleteUser(userName string) error {
 	udb.mutex.Lock()
 	defer udb.mutex.Unlock()
-	userName = normalise(userName)
+	userName = normaliseUserName(userName)
 
 	if _, exists := udb.users[userName]; !exists {
 		return fmt.Errorf("no such user: %s", userName)
@@ -144,7 +144,7 @@ func (udb UserDB) DeleteUser(userName string) error {
 func (udb UserDB) UpdatePassword(userName string, password string) error {
 	udb.mutex.Lock()
 	defer udb.mutex.Unlock()
-	userName = normalise(userName)
+	userName = normaliseUserName(userName)
 
 	if ok, msg := udb.Constraints(userName, password); !ok {
 		return fmt.Errorf("constraints failed: %s", msg)
@@ -170,7 +170,7 @@ func (udb UserDB) Authorized(userName, password string) (bool, error) {
 
 	udb.mutex.RLock()
 	defer udb.mutex.RUnlock()
-	userName = normalise(userName)
+	userName = normaliseUserName(userName)
 
 	ok := false
 
@@ -249,7 +249,7 @@ func readLines(fn string) ([]string, error) {
 	return res, nil
 }
 
-func readFile(fName string) (UserDB, error) {
+func readUsersFile(fName string) (UserDB, error) {
 	res := UserDB{
 		mutex:       &sync.RWMutex{},
 		fileName:    fName,
@@ -272,13 +272,13 @@ func readFile(fName string) (UserDB, error) {
 		fs := strings.Split(l, "\t")
 		f1 := fs[0]
 		if f1 == "DELETE" {
-			userName := normalise(fs[1])
+			userName := normaliseUserName(fs[1])
 			if _, exists := res.users[userName]; !exists {
 				return res, fmt.Errorf("no such user: %s", userName)
 			}
 			delete(res.users, userName)
 		} else {
-			userName := normalise(fs[0])
+			userName := normaliseUserName(fs[0])
 			if _, exists := res.users[userName]; exists {
 				return res, fmt.Errorf("user already exists: %s", userName)
 			}

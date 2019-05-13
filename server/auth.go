@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
 
 	"github.com/stts-se/weblib/userdb"
@@ -36,15 +37,17 @@ func (sit *singleUseTokens) purge() {
 type Auth struct {
 	sessionName     string
 	userDB          *userdb.UserDB
+	roleDB          *userdb.RoleDB
 	cookieStore     *sessions.CookieStore
 	singleUseTokens singleUseTokens
 }
 
 // NewAuth create a new Auth instance
-func NewAuth(sessionName string, userDB *userdb.UserDB, cookieStore *sessions.CookieStore) Auth {
+func NewAuth(sessionName string, userDB *userdb.UserDB, roleDB *userdb.RoleDB, cookieStore *sessions.CookieStore) Auth {
 	return Auth{
 		sessionName: sessionName,
 		userDB:      userDB,
+		roleDB:      roleDB,
 		cookieStore: cookieStore,
 		singleUseTokens: singleUseTokens{
 			mutex:  &sync.RWMutex{},
@@ -174,15 +177,49 @@ func (a *Auth) IsLoggedIn(r *http.Request) bool {
 	return false
 }
 
-// RequireAuthUser is used as middle ware to protect a path, e.g., router.Use(auth.RequireAuthUser)
-func (a *Auth) RequireAuthUser(authFunc http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if a.IsLoggedIn(r) {
-			authFunc.ServeHTTP(w, r)
+func (a *Auth) IsLoggedInWithRole(r *http.Request, roleName string) bool {
+	session, err := a.cookieStore.Get(r, a.sessionName)
+	//log.Printf("Session %#v\n", session)
+	if err != nil {
+		//log.Printf("Couldn't get user session : %v", err)
+		return false
+	}
+	if authUser, ok := session.Values["authenticated-user"].(string); ok && authUser != "" {
+		if a.roleDB.Authorized(authUser, roleName) {
+			return true
 		} else {
-			http.NotFound(w, r)
+			return false
 		}
-	})
+	}
+	return false
+}
+
+// RequireAuthUser is used as middle ware to protect a path
+func (a *Auth) RequireAuthUser(route *mux.Router) {
+	var f = func(authFunc http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if a.IsLoggedIn(r) {
+				authFunc.ServeHTTP(w, r)
+			} else {
+				http.NotFound(w, r)
+			}
+		})
+	}
+	route.Use(f)
+}
+
+// RequireAuthRole is used as middle ware to protect a path
+func (a *Auth) RequireAuthRole(route *mux.Router, roleName string) {
+	var f = func(authFunc http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if a.IsLoggedInWithRole(r, roleName) {
+				authFunc.ServeHTTP(w, r)
+			} else {
+				http.NotFound(w, r)
+			}
+		})
+	}
+	route.Use(f)
 }
 
 // ServeAuthUser will call authFunc if there is an authorized user; else unauthFunc will be called
