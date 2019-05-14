@@ -185,7 +185,7 @@ func (a *Auth) IsLoggedInWithRole(r *http.Request, roleName string) bool {
 		return false
 	}
 	if authUser, ok := session.Values["authenticated-user"].(string); ok && authUser != "" {
-		if a.roleDB.Authorized(authUser, roleName) {
+		if a.roleDB.Authorized(roleName, authUser) {
 			return true
 		} else {
 			return false

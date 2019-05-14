@@ -112,13 +112,13 @@ func main() {
 
 	protectedR := r.PathPrefix("/protected").Subrouter()
 	auth.RequireAuthUser(protectedR)
-	protectedR.HandleFunc("/", message("Protected area"))
-	protectedR.HandleFunc("/list_users", authHandlers.listUsers)
+	protectedR.HandleFunc("/", message("Protected area (open to all logged-in users)"))
 
 	adminR := r.PathPrefix("/admin").Subrouter()
 	auth.RequireAuthRole(adminR, "admin")
-	adminR.HandleFunc("/", message("Admin area"))
+	adminR.HandleFunc("/", message("Admin area (open for admin users)"))
 	adminR.HandleFunc("/invite", authHandlers.invite)
+	protectedR.HandleFunc("/list_users", authHandlers.listUsers)
 
 	r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("static/"))))
 
