@@ -22,7 +22,7 @@ func promptPassword() (string, error) {
 	return password, nil
 }
 
-func getUserDB(dbFile string) userdb.UserDB {
+func getUserDB(dbFile string) *userdb.UserDB {
 	userDB, err := userdb.ReadUserDB(dbFile)
 	if err != nil {
 		log.Fatalf("Could't read user db : %v", err)
@@ -76,6 +76,10 @@ func insertUser(meta meta, dbFile string, args []string) {
 		log.Fatalf("Couldn't insert user : %v", err)
 	}
 	fmt.Fprintf(os.Stderr, "Created user %s\n", userName)
+	err = userDB.SaveFile()
+	if err != nil {
+		log.Fatalf("Couldn't save db : %v", err)
+	}
 }
 
 func deleteUsers(meta meta, dbFile string, args []string) {
@@ -87,6 +91,10 @@ func deleteUsers(meta meta, dbFile string, args []string) {
 			log.Fatalf("Couldn't delete user : %v", err)
 		}
 		fmt.Fprintf(os.Stderr, "Deleted user %s\n", userName)
+	}
+	err := userDB.SaveFile()
+	if err != nil {
+		log.Fatalf("Couldn't save db : %v", err)
 	}
 }
 

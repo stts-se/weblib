@@ -41,43 +41,39 @@ func initUserDB(dbFile string) (*userdb.UserDB, error) {
 
 	userDB, err := userdb.ReadUserDB(dbFile)
 	if err != nil {
-		return &userDB, fmt.Errorf("couldn't read user db : %v", err)
+		return userDB, fmt.Errorf("couldn't read user db : %v", err)
 	}
 	userDB.Constraints = constraints
 	err = userDB.SaveFile()
 	if err != nil {
-		return &userDB, fmt.Errorf("couldn't save user db : %v", err)
+		return userDB, fmt.Errorf("couldn't save user db : %v", err)
 	}
-	return &userDB, nil
+	return userDB, nil
 }
 
 func initRoleDB(dbFile string) (*userdb.RoleDB, error) {
-	var constraints = func(userName, role string) (bool, string) {
-		if len(userName) == 0 {
-			return false, "empty user name"
-		}
-		if len(userName) < 4 {
-			return false, "username must have min 4 chars"
-		}
-		if len(role) == 0 {
-			return false, "empty role"
-		}
+	var constraints = func(role string, userNames []string) (bool, string) {
 		if len(role) < 4 {
 			return false, "role must have min 4 chars"
+		}
+		for _, userName := range userNames {
+			if len(userName) < 4 {
+				return false, "username must have min 4 chars"
+			}
 		}
 		return true, ""
 	}
 
 	roleDB, err := userdb.ReadRoleDB(dbFile)
 	if err != nil {
-		return &roleDB, fmt.Errorf("couldn't read role db : %v", err)
+		return roleDB, fmt.Errorf("couldn't read role db : %v", err)
 	}
 	roleDB.Constraints = constraints
 	err = roleDB.SaveFile()
 	if err != nil {
-		return &roleDB, fmt.Errorf("couldn't save role db : %v", err)
+		return roleDB, fmt.Errorf("couldn't save role db : %v", err)
 	}
-	return &roleDB, nil
+	return roleDB, nil
 }
 
 func initCookieStore(keyFile string) (*sessions.CookieStore, error) {
