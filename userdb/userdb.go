@@ -112,17 +112,6 @@ func (udb *UserDB) GetUsers() []string {
 	return res
 }
 
-// UserExists looks up the user with the specified name
-func (udb *UserDB) UserExists(userName string) (string, bool) {
-	udb.mutex.RLock()
-	defer udb.mutex.RUnlock()
-	userName = normaliseField(userName)
-
-	_, exists := udb.users[userName]
-
-	return userName, exists
-}
-
 // GetPasswordHash returns the password_hash value for userName. If no
 // such value is found, the empty string is returned (along with a
 // non-nil error value)
@@ -227,6 +216,17 @@ func (udb *UserDB) Authorized(userName, password string) (bool, error) {
 	}
 
 	return ok, nil
+}
+
+// UserExists look up the user with the specified user name
+func (udb *UserDB) UserExists(userName string) (string, bool) {
+
+	udb.mutex.RLock()
+	defer udb.mutex.RUnlock()
+	userName = normaliseField(userName)
+
+	_, ok := udb.users[userName]
+	return userName, ok
 }
 
 // SaveFile save the db to file

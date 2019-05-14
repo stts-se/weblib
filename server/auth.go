@@ -80,7 +80,6 @@ func (a *Auth) Login(w http.ResponseWriter, r *http.Request, userName, password 
 		// Set user as authenticated
 		session.Values["authenticated-user"] = userName
 		session.Save(r, w)
-		//log.Printf("User %s logged in successfully", a.GetLoggedInUserName(r))
 		return nil
 	}
 	return fmt.Errorf("login failed")
@@ -152,39 +151,19 @@ func (a *Auth) Logout(w http.ResponseWriter, r *http.Request) (string, error) {
 	return userName, nil
 }
 
-func (a *Auth) GetLoggedInUserName(r *http.Request) string {
+func (a *Auth) IsLoggedIn(r *http.Request) (string, bool) {
 	session, err := a.cookieStore.Get(r, a.sessionName)
 	if err != nil {
-		//log.Printf("Couldn't get user session : %v", err)
-		return ""
-	}
-	if auth, ok := session.Values["authenticated-user"].(string); ok {
-		return auth
-	}
-	return ""
-}
-
-func (a *Auth) IsLoggedIn(r *http.Request) bool {
-	session, err := a.cookieStore.Get(r, a.sessionName)
-	//log.Printf("Session %#v\n", session)
-	if err != nil {
-		//log.Printf("Couldn't get user session : %v", err)
-		return false
+		return "", false
 	}
 	if auth, ok := session.Values["authenticated-user"].(string); ok && auth != "" {
-		return true
+		return a.userDB.UserExists(auth)
 	}
-	return false
+	return "", false
 }
 
 func (a *Auth) IsLoggedInWithRole(r *http.Request, roleName string) bool {
-	session, err := a.cookieStore.Get(r, a.sessionName)
-	//log.Printf("Session %#v\n", session)
-	if err != nil {
-		//log.Printf("Couldn't get user session : %v", err)
-		return false
-	}
-	if authUser, ok := session.Values["authenticated-user"].(string); ok && authUser != "" {
+	if authUser, ok := a.IsLoggedIn(r); ok && authUser != "" {
 		if a.roleDB.Authorized(roleName, authUser) {
 			return true
 		} else {
@@ -198,7 +177,7 @@ func (a *Auth) IsLoggedInWithRole(r *http.Request, roleName string) bool {
 func (a *Auth) RequireAuthUser(route *mux.Router) {
 	var f = func(authFunc http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if a.IsLoggedIn(r) {
+			if _, ok := a.IsLoggedIn(r); ok {
 				authFunc.ServeHTTP(w, r)
 			} else {
 				http.NotFound(w, r)
@@ -226,8 +205,7 @@ func (a *Auth) RequireAuthRole(route *mux.Router, roleName string) {
 func (a *Auth) ServeAuthUser(authFunc http.HandlerFunc) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		if a.IsLoggedIn(r) {
-			// TODO: Check if user has access rights to the specified level?
+		if _, ok := a.IsLoggedIn(r); ok {
 			authFunc(w, r)
 		} else {
 			http.NotFound(w, r)
@@ -239,8 +217,7 @@ func (a *Auth) ServeAuthUser(authFunc http.HandlerFunc) http.HandlerFunc {
 func (a *Auth) ServeAuthUserOrElse(authFunc http.HandlerFunc, unauthFunc http.HandlerFunc) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		if a.IsLoggedIn(r) {
-			// TODO: Check if user has access rights to the specified level?
+		if _, ok := a.IsLoggedIn(r); ok {
 			authFunc(w, r)
 		} else {
 			unauthFunc(w, r)
