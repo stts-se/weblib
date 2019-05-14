@@ -1,8 +1,6 @@
 package userdb
 
 import (
-	"bufio"
-	"compress/gzip"
 	"fmt"
 	"os"
 	"sort"
@@ -31,8 +29,8 @@ var prms = &params{
 }
 
 // NewUserDB creates a new user database
-func NewUserDB() UserDB {
-	return UserDB{
+func NewUserDB() *UserDB {
+	return &UserDB{
 		mutex:       &sync.RWMutex{},
 		users:       make(map[string]string),
 		Constraints: func(user string, password string) (bool, string) { return true, "" },
@@ -40,7 +38,7 @@ func NewUserDB() UserDB {
 }
 
 // EmptyUserDB creates a new user database with the specified file name, which will be removed if it already exists
-func EmptyUserDB(fileName string) (UserDB, error) {
+func EmptyUserDB(fileName string) (*UserDB, error) {
 	res := NewUserDB()
 	res.fileName = fileName
 	err := res.clearFile()
@@ -48,16 +46,59 @@ func EmptyUserDB(fileName string) (UserDB, error) {
 }
 
 // ReadUserDB reads a user db from file
-func ReadUserDB(fileName string) (UserDB, error) {
-	return readUsersFile(fileName)
+func ReadUserDB(fileName string) (*UserDB, error) {
+	res := &UserDB{
+		mutex:       &sync.RWMutex{},
+		fileName:    fileName,
+		users:       make(map[string]string),
+		Constraints: func(user string, password string) (bool, string) { return true, "" },
+	}
+	if !fileExists(fileName) {
+		return res, nil
+	}
+
+	lines, err := readLines(fileName)
+	if err != nil {
+		return res, err
+	}
+
+	res.mutex.Lock()
+	defer res.mutex.Unlock()
+
+	for _, l := range lines {
+		fs := strings.Split(l, fieldSeparator)
+		if fs[0] == "DELETE" {
+			userName := normaliseField(fs[1])
+			if _, exists := res.users[userName]; !exists {
+				return res, fmt.Errorf("no such user: %s", userName)
+			}
+			delete(res.users, userName)
+		} else {
+			userName := normaliseField(fs[0])
+			password := fs[1]
+			if _, exists := res.users[userName]; exists {
+				return res, fmt.Errorf("user already exists: %s", userName)
+			}
+
+			if ok, msg := res.CheckConstraints(userName, password); !ok {
+				return res, fmt.Errorf("constraints failed: %s", msg)
+			}
+			res.users[userName] = password
+		}
+	}
+	return res, nil
 }
 
-func normaliseUserName(userName string) string {
-	return strings.TrimSpace(strings.ToLower(userName))
+// CheckConstraints to check if the db entry is valid given certain constraints
+func (udb *UserDB) CheckConstraints(userName, password string) (bool, string) {
+	if ok, msg := defaultConstraints("user", userName); !ok {
+		return ok, msg
+	}
+	return udb.Constraints(userName, password)
 }
 
 // GetUsers returns the users defined in the database
-func (udb UserDB) GetUsers() []string {
+func (udb *UserDB) GetUsers() []string {
 	var res []string
 
 	udb.mutex.RLock()
@@ -72,10 +113,10 @@ func (udb UserDB) GetUsers() []string {
 }
 
 // UserExists looks up the user with the specified name
-func (udb UserDB) UserExists(userName string) (string, bool) {
+func (udb *UserDB) UserExists(userName string) (string, bool) {
 	udb.mutex.RLock()
 	defer udb.mutex.RUnlock()
-	userName = normaliseUserName(userName)
+	userName = normaliseField(userName)
 
 	_, exists := udb.users[userName]
 
@@ -85,11 +126,11 @@ func (udb UserDB) UserExists(userName string) (string, bool) {
 // GetPasswordHash returns the password_hash value for userName. If no
 // such value is found, the empty string is returned (along with a
 // non-nil error value)
-func (udb UserDB) GetPasswordHash(userName string) (string, error) {
+func (udb *UserDB) GetPasswordHash(userName string) (string, error) {
 
 	udb.mutex.RLock()
 	defer udb.mutex.RUnlock()
-	userName = normaliseUserName(userName)
+	userName = normaliseField(userName)
 
 	hash, ok := udb.users[userName]
 	if !ok {
@@ -99,12 +140,12 @@ func (udb UserDB) GetPasswordHash(userName string) (string, error) {
 }
 
 // InsertUser is used to insert a user into the database
-func (udb UserDB) InsertUser(userName, password string) error {
+func (udb *UserDB) InsertUser(userName, password string) error {
 	udb.mutex.Lock()
 	defer udb.mutex.Unlock()
-	userName = normaliseUserName(userName)
+	userName = normaliseField(userName)
 
-	if ok, msg := udb.Constraints(userName, password); !ok {
+	if ok, msg := udb.CheckConstraints(userName, password); !ok {
 		return fmt.Errorf("constraints failed: %s", msg)
 	}
 
@@ -119,32 +160,32 @@ func (udb UserDB) InsertUser(userName, password string) error {
 
 	udb.users[userName] = passwordHash
 	if udb.fileName != "" {
-		udb.appendToFile(fmt.Sprintf("%s\t%s", userName, passwordHash))
+		udb.appendToFile(fmt.Sprintf("%s%s%s", userName, fieldSeparator, passwordHash))
 	}
 	return nil
 }
 
 // DeleteUser is used to delete a user from the database
-func (udb UserDB) DeleteUser(userName string) error {
+func (udb *UserDB) DeleteUser(userName string) error {
 	udb.mutex.Lock()
 	defer udb.mutex.Unlock()
-	userName = normaliseUserName(userName)
+	userName = normaliseField(userName)
 
 	if _, exists := udb.users[userName]; !exists {
 		return fmt.Errorf("no such user: %s", userName)
 	}
 	delete(udb.users, userName)
 	if udb.fileName != "" {
-		udb.appendToFile(fmt.Sprintf("DELETE\t%s", userName))
+		udb.appendToFile(fmt.Sprintf("%s%s%s", "DELETE", fieldSeparator, userName))
 	}
 	return nil
 }
 
 // UpdatePassword updates the password for the specified user
-func (udb UserDB) UpdatePassword(userName string, password string) error {
+func (udb *UserDB) UpdatePassword(userName string, password string) error {
 	udb.mutex.Lock()
 	defer udb.mutex.Unlock()
-	userName = normaliseUserName(userName)
+	userName = normaliseField(userName)
 
 	if ok, msg := udb.Constraints(userName, password); !ok {
 		return fmt.Errorf("constraints failed: %s", msg)
@@ -160,17 +201,18 @@ func (udb UserDB) UpdatePassword(userName string, password string) error {
 
 	udb.users[userName] = passwordHash
 	if udb.fileName != "" {
-		udb.appendToFile(fmt.Sprintf("UPDATE\t%s\t%s", userName, passwordHash))
+		udb.appendToFile(fmt.Sprintf("%s%s%s", "DELETE", fieldSeparator, userName))
+		udb.appendToFile(fmt.Sprintf("%s%s%s", userName, fieldSeparator, passwordHash))
 	}
 	return nil
 }
 
 // Authorized is used to check if the password matches the specified user name
-func (udb UserDB) Authorized(userName, password string) (bool, error) {
+func (udb *UserDB) Authorized(userName, password string) (bool, error) {
 
 	udb.mutex.RLock()
 	defer udb.mutex.RUnlock()
-	userName = normaliseUserName(userName)
+	userName = normaliseField(userName)
 
 	ok := false
 
@@ -187,7 +229,8 @@ func (udb UserDB) Authorized(userName, password string) (bool, error) {
 	return ok, nil
 }
 
-func (udb UserDB) SaveFile() error {
+// SaveFile save the db to file
+func (udb *UserDB) SaveFile() error {
 	if udb.fileName == "" {
 		return fmt.Errorf("file name not set")
 	}
@@ -202,13 +245,13 @@ func (udb UserDB) SaveFile() error {
 	defer fh.Close()
 
 	for userName, hash := range udb.users {
-		fmt.Fprintf(fh, "%s\t%s\n", userName, hash)
+		fmt.Fprintf(fh, "%s%s%s\n", userName, fieldSeparator, hash)
 	}
 	return nil
 }
 
 // NB that it is not thread-safe, and should be called after locking.
-func (udb UserDB) appendToFile(line string) error {
+func (udb *UserDB) appendToFile(line string) error {
 	fh, err := os.OpenFile(udb.fileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
 		return err
@@ -223,80 +266,7 @@ func (udb UserDB) appendToFile(line string) error {
 	return nil
 }
 
-func readLines(fn string) ([]string, error) {
-	var res []string
-	var scanner *bufio.Scanner
-	fh, err := os.Open(fn)
-	if err != nil {
-		return res, fmt.Errorf("failed to read '%s' : %v", fn, err)
-	}
-
-	if strings.HasSuffix(fn, ".gz") {
-		gz, err := gzip.NewReader(fh)
-		if err != nil {
-			return res, fmt.Errorf("failed to read '%s' : %v", fn, err)
-		}
-		scanner = bufio.NewScanner(gz)
-	} else {
-		scanner = bufio.NewScanner(fh)
-	}
-	for scanner.Scan() {
-		res = append(res, scanner.Text())
-	}
-	if err := scanner.Err(); err != nil {
-		return res, fmt.Errorf("failed to read '%s' : %v", fn, err)
-	}
-	return res, nil
-}
-
-func readUsersFile(fName string) (UserDB, error) {
-	res := UserDB{
-		mutex:       &sync.RWMutex{},
-		fileName:    fName,
-		users:       make(map[string]string),
-		Constraints: func(user string, password string) (bool, string) { return true, "" },
-	}
-	if !fileExists(fName) {
-		return res, nil
-	}
-
-	lines, err := readLines(fName)
-	if err != nil {
-		return res, err
-	}
-
-	res.mutex.Lock()
-	defer res.mutex.Unlock()
-
-	for _, l := range lines {
-		fs := strings.Split(l, "\t")
-		f1 := fs[0]
-		if f1 == "DELETE" {
-			userName := normaliseUserName(fs[1])
-			if _, exists := res.users[userName]; !exists {
-				return res, fmt.Errorf("no such user: %s", userName)
-			}
-			delete(res.users, userName)
-		} else {
-			userName := normaliseUserName(fs[0])
-			if _, exists := res.users[userName]; exists {
-				return res, fmt.Errorf("user already exists: %s", userName)
-			}
-
-			res.users[userName] = fs[1]
-		}
-	}
-	return res, nil
-}
-
-func fileExists(fileName string) bool {
-	if _, err := os.Stat(fileName); os.IsNotExist(err) {
-		return false
-	}
-	return true
-}
-
-func (udb UserDB) clearFile() error {
+func (udb *UserDB) clearFile() error {
 	if fileExists(udb.fileName) {
 		err := os.Remove(udb.fileName)
 		if err != nil {

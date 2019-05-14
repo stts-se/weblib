@@ -98,7 +98,7 @@ func Test_UserDB_File(t *testing.T) {
 		t.Errorf("Fail: %v", err)
 	}
 
-	udb2, err := readFile(udb1.fileName)
+	udb2, err := ReadUserDB(udb1.fileName)
 	if err != nil {
 		t.Errorf("Fail: %v", err)
 	}
