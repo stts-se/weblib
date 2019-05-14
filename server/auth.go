@@ -43,8 +43,8 @@ type Auth struct {
 }
 
 // NewAuth create a new Auth instance
-func NewAuth(sessionName string, userDB *userdb.UserDB, roleDB *userdb.RoleDB, cookieStore *sessions.CookieStore) Auth {
-	return Auth{
+func NewAuth(sessionName string, userDB *userdb.UserDB, roleDB *userdb.RoleDB, cookieStore *sessions.CookieStore) (*Auth, error) {
+	res := &Auth{
 		sessionName: sessionName,
 		userDB:      userDB,
 		roleDB:      roleDB,
@@ -55,6 +55,11 @@ func NewAuth(sessionName string, userDB *userdb.UserDB, roleDB *userdb.RoleDB, c
 			maxAge: 86400 * 7, // one week in seconds
 		},
 	}
+	err := userdb.Validate(res.userDB, res.roleDB)
+	if err != nil {
+		return res, fmt.Errorf("userdb/roledb validation failed : %v", err)
+	}
+	return res, nil
 }
 
 // Login : log in a user with the specified username and password, creating a new auth session for the user

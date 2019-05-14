@@ -220,6 +220,23 @@ func (rdb *RoleDB) ListUsers(role string) ([]string, bool) {
 	return userNames, exists
 }
 
+// ListRoles list all roles with users
+func (rdb *RoleDB) ListRoles() map[string][]string {
+	rdb.mutex.RLock()
+	defer rdb.mutex.RUnlock()
+	res := make(map[string][]string)
+
+	for role, userMap := range rdb.roles {
+		userNames := []string{}
+		for userName := range userMap {
+			userNames = append(userNames, userName)
+		}
+		sort.Strings(userNames)
+		res[role] = userNames
+	}
+	return res
+}
+
 // SaveFile save the db to file
 func (rdb *RoleDB) SaveFile() error {
 	if rdb.fileName == "" {

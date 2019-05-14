@@ -93,9 +93,12 @@ func main() {
 		log.Fatalf("UserDB init failed : %v", err)
 	}
 
-	auth := server.NewAuth("auth-user-weblib", userDB, roleDB, cookieStore)
+	auth, err := server.NewAuth("auth-user-weblib", userDB, roleDB, cookieStore)
+	if err != nil {
+		log.Fatalf("Auth init failed : %v", err)
+	}
 	fullURL := fmt.Sprintf("%s://%s", protocol, address)
-	authHandlers := AuthHandlers{ServerURL: fullURL, Auth: &auth}
+	authHandlers := AuthHandlers{ServerURL: fullURL, Auth: auth}
 
 	r := mux.NewRouter()
 	r.StrictSlash(true)
@@ -129,7 +132,7 @@ func main() {
 		ReadTimeout:  15 * time.Second,
 	}
 	srv := Server{
-		auth:       &auth,
+		auth:       auth,
 		protocol:   protocol,
 		tlsEnabled: tlsEnabled,
 		httpServer: httpSrv,
