@@ -246,7 +246,7 @@ func printHelp() {
 
 func main() {
 	args := os.Args[1:]
-	if len(args) < 1 || args[0] == "help" {
+	if len(args) < 2 || args[0] == "help" {
 		printHelp()
 		os.Exit(0)
 	}
