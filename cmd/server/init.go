@@ -7,6 +7,7 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 
@@ -76,6 +77,11 @@ func initRoleDB(dbFile string) (*userdb.RoleDB, error) {
 	return roleDB, nil
 }
 
+func mkParentDir(fileName string) error {
+	dir := filepath.Dir(fileName)
+	return os.MkdirAll(dir, os.ModePerm)
+}
+
 func initCookieStore(keyFile string) (*sessions.CookieStore, error) {
 	var cs *sessions.CookieStore
 	var key []byte
@@ -101,6 +107,12 @@ func initCookieStore(keyFile string) (*sessions.CookieStore, error) {
 			fmt.Fprintf(os.Stderr, "BYE!\n")
 			os.Exit(0)
 		}
+
+		err = mkParentDir(keyFile)
+		if err != nil {
+			return cs, err
+		}
+
 		key = make([]byte, 32)
 		_, err = rand.Read(key)
 		if err != nil {

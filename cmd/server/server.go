@@ -44,15 +44,27 @@ func main() {
 	host := flag.String("host", "127.0.0.1", "server host")
 	port := flag.Int("port", 7932, "server port")
 	serverKeyFile := flag.String("key", "server_config/serverkey", "server key file for session cookies")
-	userDBFile := flag.String("u", "userdb.txt", "user database")
-	roleDBFile := flag.String("r", "roles.txt", "role database")
+	userDBFile := flag.String("u", "", "user database")
+	roleDBFile := flag.String("r", "", "role database")
 	help := flag.Bool("h", false, "print usage and exit")
 
 	// go run /usr/local/go/src/crypto/tls/generate_cert.go
 	tlsCert := flag.String("tlsCert", "", "server_config/cert.pem (generate with golang's crypto/tls/generate_cert.go) (default disabled)")
 	tlsKey := flag.String("tlsKey", "", "server_config/key.pem (generate with golang's crypto/tls/generate_cert.go) (default disabled)")
 
+	// parse check for missing required flags
+	required := map[string]string{"u": "user database", "r": "role database"}
 	flag.Parse()
+	seen := make(map[string]bool)
+	flag.Visit(func(f *flag.Flag) { seen[f.Name] = true })
+	for req, desc := range required {
+		if !seen[req] {
+			// or possibly use `log.Fatalf` instead of:
+			fmt.Fprintf(os.Stderr, "missing required flag -%s %s\n", req, desc)
+			flag.PrintDefaults()
+			os.Exit(2) // the same exit code flag.Parse uses
+		}
+	}
 
 	args := flag.Args()
 	if len(args) != 0 {
