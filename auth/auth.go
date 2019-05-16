@@ -168,15 +168,15 @@ func (a *Auth) IsLoggedIn(r *http.Request) (bool, string) {
 	return false, ""
 }
 
-// IsLoggedInWithRole : check if the user is logged in with the specified role
-func (a *Auth) IsLoggedInWithRole(r *http.Request, roleName string) bool {
+// IsLoggedInWithRole : check if a user is logged in with the specified role.  Second return value is the user name.
+func (a *Auth) IsLoggedInWithRole(r *http.Request, roleName string) (bool, string) {
 	if ok, authUser := a.IsLoggedIn(r); ok && authUser != "" {
 		if a.roleDB.Authorized(roleName, authUser) {
-			return true
+			return true, authUser
 		}
-		return false
+		return false, ""
 	}
-	return false
+	return false, ""
 }
 
 // RequireAuthUser is used as middle ware to protect a path
@@ -197,7 +197,7 @@ func (a *Auth) RequireAuthUser(route *mux.Router) {
 func (a *Auth) RequireAuthRole(route *mux.Router, roleName string) {
 	var f = func(authFunc http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if a.IsLoggedInWithRole(r, roleName) {
+			if ok, _ := a.IsLoggedInWithRole(r, roleName); ok {
 				authFunc.ServeHTTP(w, r)
 			} else {
 				http.NotFound(w, r)
