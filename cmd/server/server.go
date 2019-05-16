@@ -15,6 +15,7 @@ import (
 	"github.com/stts-se/weblib/auth"
 )
 
+// Server container
 type Server struct {
 	httpServer *http.Server
 	auth       *auth.Auth
@@ -22,7 +23,7 @@ type Server struct {
 	tlsEnabled bool
 }
 
-func (s *Server) URL() string {
+func (s *Server) url() string {
 	return fmt.Sprintf("%s://%s", s.protocol, s.httpServer.Addr)
 }
 

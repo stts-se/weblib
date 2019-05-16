@@ -156,24 +156,25 @@ func (a *Auth) Logout(w http.ResponseWriter, r *http.Request) (string, error) {
 	return userName, nil
 }
 
-func (a *Auth) IsLoggedIn(r *http.Request) (string, bool) {
+// IsLoggedIn : check if the user is logged in. Second return value is the normalised version of the input user name.
+func (a *Auth) IsLoggedIn(r *http.Request) (bool, string) {
 	session, err := a.cookieStore.Get(r, a.sessionName)
 	if err != nil {
-		return "", false
+		return false, ""
 	}
 	if auth, ok := session.Values["authenticated-user"].(string); ok && auth != "" {
 		return a.userDB.UserExists(auth)
 	}
-	return "", false
+	return false, ""
 }
 
+// IsLoggedInWithRole
 func (a *Auth) IsLoggedInWithRole(r *http.Request, roleName string) bool {
-	if authUser, ok := a.IsLoggedIn(r); ok && authUser != "" {
+	if ok, authUser := a.IsLoggedIn(r); ok && authUser != "" {
 		if a.roleDB.Authorized(roleName, authUser) {
 			return true
-		} else {
-			return false
 		}
+		return false
 	}
 	return false
 }
@@ -182,7 +183,7 @@ func (a *Auth) IsLoggedInWithRole(r *http.Request, roleName string) bool {
 func (a *Auth) RequireAuthUser(route *mux.Router) {
 	var f = func(authFunc http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if _, ok := a.IsLoggedIn(r); ok {
+			if ok, _ := a.IsLoggedIn(r); ok {
 				authFunc.ServeHTTP(w, r)
 			} else {
 				http.NotFound(w, r)
@@ -210,7 +211,7 @@ func (a *Auth) RequireAuthRole(route *mux.Router, roleName string) {
 func (a *Auth) ServeAuthUser(authFunc http.HandlerFunc) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		if _, ok := a.IsLoggedIn(r); ok {
+		if ok, _ := a.IsLoggedIn(r); ok {
 			authFunc(w, r)
 		} else {
 			http.NotFound(w, r)
@@ -222,7 +223,7 @@ func (a *Auth) ServeAuthUser(authFunc http.HandlerFunc) http.HandlerFunc {
 func (a *Auth) ServeAuthUserOrElse(authFunc http.HandlerFunc, unauthFunc http.HandlerFunc) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		if _, ok := a.IsLoggedIn(r); ok {
+		if ok, _ := a.IsLoggedIn(r); ok {
 			authFunc(w, r)
 		} else {
 			unauthFunc(w, r)

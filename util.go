@@ -7,6 +7,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// GetParam : get request params
 func GetParam(paramName string, r *http.Request) string {
 	res := r.FormValue(paramName)
 	if res != "" {
@@ -16,6 +17,7 @@ func GetParam(paramName string, r *http.Request) string {
 	return vars[paramName]
 }
 
+// ParseForm : parse input form, and add required params to a key-value map
 func ParseForm(r *http.Request, requiredParams []string) (map[string]string, bool) {
 	res := make(map[string]string)
 	missing := []string{}

@@ -14,7 +14,10 @@ import (
 )
 
 var (
-	ErrInvalidHash         = errors.New("the encoded hash is not in the correct format")
+	//ErrInvalidHash error message for invalid hash format
+	ErrInvalidHash = errors.New("the encoded hash is not in the correct format")
+
+	// ErrIncompatibleVersion error message for incompatible version of argon2
 	ErrIncompatibleVersion = errors.New("incompatible version of argon2")
 )
 

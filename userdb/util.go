@@ -77,7 +77,7 @@ func contains(slice []string, value string) bool {
 func Validate(userDB *UserDB, roleDB *RoleDB) error {
 	for role, users := range roleDB.ListRoles() {
 		for _, user := range users {
-			if _, ok := userDB.UserExists(user); !ok {
+			if exists, _ := userDB.UserExists(user); !exists {
 				return fmt.Errorf("role %s contains invalid user: %s", role, user)
 			}
 		}

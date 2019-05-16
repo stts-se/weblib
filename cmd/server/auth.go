@@ -10,6 +10,7 @@ import (
 	"github.com/stts-se/weblib/auth"
 )
 
+// AuthHandlers a set of handlers for user authorization
 type AuthHandlers struct {
 	ServerURL string
 	Auth      *auth.Auth
@@ -17,7 +18,7 @@ type AuthHandlers struct {
 
 func (a *AuthHandlers) helloWorld(w http.ResponseWriter, r *http.Request) {
 	var msg string
-	if userName, ok := a.Auth.IsLoggedIn(r); ok {
+	if ok, userName := a.Auth.IsLoggedIn(r); ok {
 		msg = fmt.Sprintf("Hello, you are logged in as user %s!", userName)
 	} else {
 		msg = "Hello, you are not logged in."
@@ -27,7 +28,7 @@ func (a *AuthHandlers) helloWorld(w http.ResponseWriter, r *http.Request) {
 
 func (a *AuthHandlers) message(msg string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if uName, ok := a.Auth.IsLoggedIn(r); ok {
+		if ok, uName := a.Auth.IsLoggedIn(r); ok {
 			msg = strings.Replace(msg, "${username}", uName, -1)
 		}
 		fmt.Fprintf(w, "%s\n", msg)

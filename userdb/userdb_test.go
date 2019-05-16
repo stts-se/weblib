@@ -29,7 +29,7 @@ func Test_UserDB(t *testing.T) {
 		t.Errorf("Fail: %v", err)
 	}
 
-	userName, exists := udb.UserExists("KalleA")
+	exists, userName := udb.UserExists("KalleA")
 	if !exists {
 		t.Errorf("oh no : %v", err)
 	}
@@ -103,7 +103,7 @@ func Test_UserDB_File(t *testing.T) {
 		t.Errorf("Fail: %v", err)
 	}
 
-	_, exists := udb2.UserExists("robert")
+	exists, _ := udb2.UserExists("robert")
 	if exists {
 		t.Errorf("oh no : %v", err)
 	}

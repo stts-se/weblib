@@ -218,15 +218,15 @@ func (udb *UserDB) Authorized(userName, password string) (bool, error) {
 	return ok, nil
 }
 
-// UserExists look up the user with the specified user name
-func (udb *UserDB) UserExists(userName string) (string, bool) {
+// UserExists check if a user with the specified user name. Second return value is the normalised version of the input user name.
+func (udb *UserDB) UserExists(userName string) (bool, string) {
 
 	udb.mutex.RLock()
 	defer udb.mutex.RUnlock()
 	userName = normaliseField(userName)
 
 	_, ok := udb.users[userName]
-	return userName, ok
+	return ok, userName
 }
 
 // SaveFile save the db to file
