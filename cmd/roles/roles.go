@@ -96,7 +96,7 @@ func listRoles(meta meta, dbFile string, args []string) {
 }
 
 var cmds = []cmd{
-	cmd{
+	{
 		meta: meta{
 			name:     "insert",
 			desc:     "Insert role",
@@ -104,7 +104,7 @@ var cmds = []cmd{
 		},
 		f: insertRole,
 	},
-	cmd{
+	{
 		meta: meta{
 			name:     "delete",
 			desc:     "Delete roles",
@@ -112,7 +112,7 @@ var cmds = []cmd{
 		},
 		f: deleteRoles,
 	},
-	cmd{
+	{
 		meta: meta{
 			name:     "list",
 			desc:     "List roles",
@@ -120,7 +120,7 @@ var cmds = []cmd{
 		},
 		f: listRoles,
 	},
-	cmd{
+	{
 		meta: meta{
 			name:     "create",
 			desc:     "Create empty database",
@@ -128,7 +128,7 @@ var cmds = []cmd{
 		},
 		f: createDB,
 	},
-	cmd{
+	{
 		meta: meta{
 			name:     "clear",
 			desc:     "Clear database",

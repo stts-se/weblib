@@ -128,7 +128,7 @@ func listUsers(meta meta, dbFile string, args []string) {
 }
 
 var cmds = []cmd{
-	cmd{
+	{
 		meta: meta{
 			name:     "insert",
 			desc:     "Insert user",
@@ -136,7 +136,7 @@ var cmds = []cmd{
 		},
 		f: insertUser,
 	},
-	cmd{
+	{
 		meta: meta{
 			name:     "delete",
 			desc:     "Delete users",
@@ -144,7 +144,7 @@ var cmds = []cmd{
 		},
 		f: deleteUsers,
 	},
-	cmd{
+	{
 		meta: meta{
 			name:     "list",
 			desc:     "List users",
@@ -152,7 +152,7 @@ var cmds = []cmd{
 		},
 		f: listUsers,
 	},
-	cmd{
+	{
 		meta: meta{
 			name:     "create",
 			desc:     "Create empty database",
@@ -160,7 +160,7 @@ var cmds = []cmd{
 		},
 		f: createDB,
 	},
-	cmd{
+	{
 		meta: meta{
 			name:     "clear",
 			desc:     "Clear database",
