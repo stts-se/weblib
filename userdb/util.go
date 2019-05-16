@@ -8,8 +8,11 @@ import (
 	"strings"
 )
 
-const FieldSeparator = "\t" // separates fields in a file
-const ItemSeparator = " "   // separates items in a list
+// FieldSeparator separates fields in a file (for file reading/writing)
+const FieldSeparator = "\t"
+
+// ItemSeparator separates items in a list (for file reading/writing)
+const ItemSeparator = " "
 
 var defaultConstraints = func(fieldName, fieldValue string) (bool, string) {
 	if len(fieldValue) == 0 {

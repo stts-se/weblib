@@ -243,7 +243,7 @@ func (rdb *RoleDB) ListUsers(role string) ([]string, bool) {
 	return userNames, exists
 }
 
-// ListRoles list all roles with users
+// ListRolesAndUsers list all roles with users
 func (rdb *RoleDB) ListRolesAndUsers() map[string][]string {
 	rdb.mutex.RLock()
 	defer rdb.mutex.RUnlock()
