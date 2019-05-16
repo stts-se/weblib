@@ -8,18 +8,18 @@ import (
 	"strings"
 )
 
-const fieldSeparator = "\t" // separates fields in a file
-const itemSeparator = " "   // separates items in a list
+const FieldSeparator = "\t" // separates fields in a file
+const ItemSeparator = " "   // separates items in a list
 
 var defaultConstraints = func(fieldName, fieldValue string) (bool, string) {
 	if len(fieldValue) == 0 {
 		return false, fmt.Sprintf("empty %s", fieldName)
 	}
-	if strings.Contains(fieldValue, fieldSeparator) {
-		return false, fmt.Sprintf("%s cannot contain %s", fieldName, fieldSeparator)
+	if strings.Contains(fieldValue, FieldSeparator) {
+		return false, fmt.Sprintf("%s cannot contain %s", fieldName, FieldSeparator)
 	}
-	if strings.Contains(fieldValue, itemSeparator) {
-		return false, fmt.Sprintf("%s cannot contain %s", fieldName, fieldSeparator)
+	if strings.Contains(fieldValue, ItemSeparator) {
+		return false, fmt.Sprintf("%s cannot contain %s", fieldName, FieldSeparator)
 	}
 	if normaliseField(fieldValue) != fieldValue {
 		return false, fmt.Sprintf("%s is not normalised", fieldName)
@@ -75,7 +75,7 @@ func contains(slice []string, value string) bool {
 
 // Validate user db with role db (all user names in the role db must be defined in the user db)
 func Validate(userDB *UserDB, roleDB *RoleDB) error {
-	for role, users := range roleDB.ListRoles() {
+	for role, users := range roleDB.ListRolesAndUsers() {
 		for _, user := range users {
 			if exists, _ := userDB.UserExists(user); !exists {
 				return fmt.Errorf("role %s contains invalid user: %s", role, user)

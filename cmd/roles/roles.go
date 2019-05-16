@@ -4,10 +4,21 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/stts-se/weblib/userdb"
 )
+
+func sortedKeys(m map[string][]string) []string {
+	res := []string{}
+	for k := range m {
+		res = append(res, k)
+	}
+
+	sort.Slice(res, func(i, j int) bool { return res[i] < res[j] })
+	return res
+}
 
 func getRoleDB(dbFile string) *userdb.RoleDB {
 	roleDB, err := userdb.ReadRoleDB(dbFile)
@@ -35,6 +46,23 @@ func getRoleDB(dbFile string) *userdb.RoleDB {
 	return roleDB
 }
 
+func revokeRole(meta meta, dbFile string, args []string) {
+	roleDB := getRoleDB(dbFile)
+	role := meta.getArgValue(args, "role")
+	userNames := meta.getArgValues(args, "usernames*")
+	for _, user := range userNames {
+		err := roleDB.DeleteUserRole(role, user)
+		if err != nil {
+			log.Fatalf("Couldn't revoke role : %v", err)
+		}
+		fmt.Fprintf(os.Stderr, "Revoked role %s for user %s\n", role, user)
+		err = roleDB.SaveFile()
+		if err != nil {
+			log.Fatalf("Couldn't save db : %v", err)
+		}
+	}
+}
+
 func insertRole(meta meta, dbFile string, args []string) {
 	roleDB := getRoleDB(dbFile)
 	role := meta.getArgValue(args, "role")
@@ -43,7 +71,7 @@ func insertRole(meta meta, dbFile string, args []string) {
 	if err != nil {
 		log.Fatalf("Couldn't insert role : %v", err)
 	}
-	fmt.Fprintf(os.Stderr, "Created role %s\n", role)
+	fmt.Fprintf(os.Stderr, "Inserted role %s\n", role)
 	err = roleDB.SaveFile()
 	if err != nil {
 		log.Fatalf("Couldn't save db : %v", err)
@@ -82,11 +110,26 @@ func clearDB(meta meta, dbFile string, args []string) {
 	fmt.Fprintf(fh, "")
 }
 
-func listRoles(meta meta, dbFile string, args []string) {
+// func listRoles(meta meta, dbFile string, args []string) {
+// 	roleDB := getRoleDB(dbFile)
+// 	roles := roleDB.GetRoles()
+// 	for _, r := range roles {
+// 		fmt.Println(r)
+// 	}
+// 	pluralS := "s"
+// 	if len(roles) == 1 {
+// 		pluralS = ""
+// 	}
+// 	fmt.Printf("%d role%s\n", len(roles), pluralS)
+// }
+
+func listRolesAndUsers(meta meta, dbFile string, args []string) {
 	roleDB := getRoleDB(dbFile)
-	roles := roleDB.GetRoles()
-	for _, u := range roles {
-		fmt.Println(u)
+	roles := roleDB.ListRolesAndUsers()
+	roleNames := sortedKeys(roles)
+	for _, r := range roleNames {
+		u := roles[r]
+		fmt.Printf("%s\t%s\n", r, strings.Join(u, userdb.ItemSeparator))
 	}
 	pluralS := "s"
 	if len(roles) == 1 {
@@ -114,11 +157,19 @@ var cmds = []cmd{
 	},
 	{
 		meta: meta{
+			name:     "revoke",
+			desc:     "Revoke role for users",
+			argNames: []string{"role", "usernames*"},
+		},
+		f: revokeRole,
+	},
+	{
+		meta: meta{
 			name:     "list",
-			desc:     "List roles",
+			desc:     "List roles and users",
 			argNames: []string{},
 		},
-		f: listRoles,
+		f: listRolesAndUsers,
 	},
 	{
 		meta: meta{
@@ -156,7 +207,7 @@ func (m meta) validateArgs(args []string) {
 		}
 	}
 	lastArgName := m.argNames[len(m.argNames)-1]
-	if strings.HasSuffix(lastArgName, "*") {
+	if strings.HasSuffix(lastArgName, "*") && len(args) >= len(m.argNames) {
 		args = args[0:len(m.argNames)]
 	}
 	if len(args) != len(m.argNames) {

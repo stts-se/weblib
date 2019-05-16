@@ -58,7 +58,7 @@ func ReadRoleDB(fileName string) (*RoleDB, error) {
 	defer res.mutex.Unlock()
 
 	for _, l := range lines {
-		fs := strings.Split(l, fieldSeparator)
+		fs := strings.Split(l, FieldSeparator)
 		if fs[0] == "DELETE" {
 			role := normaliseField(fs[1])
 			if _, exists := res.roles[role]; !exists {
@@ -67,7 +67,7 @@ func ReadRoleDB(fileName string) (*RoleDB, error) {
 			delete(res.roles, role)
 		} else {
 			role := fs[0]
-			userNames := strings.Split(fs[1], itemSeparator)
+			userNames := strings.Split(fs[1], ItemSeparator)
 			userMap := make(map[string]bool)
 			for _, userName := range userNames {
 				userMap[userName] = true
@@ -110,6 +110,24 @@ func (rdb *RoleDB) GetRoles() []string {
 	return res
 }
 
+// CreateRole is used to insert a user into the database
+func (rdb *RoleDB) CreateRole(role string) error {
+	rdb.mutex.Lock()
+	defer rdb.mutex.Unlock()
+	role = normaliseField(role)
+
+	if _, exists := rdb.roles[role]; exists {
+		return fmt.Errorf("role already exists: %s", role)
+	}
+
+	rdb.roles[role] = make(map[string]bool)
+
+	if rdb.fileName != "" {
+		rdb.appendToFile(fmt.Sprintf("%s%s", role, FieldSeparator))
+	}
+	return nil
+}
+
 // InsertRole is used to insert a user into the database
 func (rdb *RoleDB) InsertRole(role string, userNames []string) error {
 	rdb.mutex.Lock()
@@ -118,11 +136,11 @@ func (rdb *RoleDB) InsertRole(role string, userNames []string) error {
 	if ok, msg := rdb.CheckConstraints(role, userNames); !ok {
 		return fmt.Errorf("constraints failed: %s", msg)
 	}
-	if _, exists := rdb.roles[role]; exists {
-		return fmt.Errorf("role already exists: %s", role)
+	if _, exists := rdb.roles[role]; !exists {
+		rdb.roles[role] = make(map[string]bool)
 	}
 
-	userMap := make(map[string]bool)
+	userMap := rdb.roles[role]
 	for _, userName := range userNames {
 		userName = normaliseField(userName)
 		userMap[userName] = true
@@ -135,7 +153,7 @@ func (rdb *RoleDB) InsertRole(role string, userNames []string) error {
 			userNames = append(userNames, userName)
 		}
 		sort.Strings(userNames)
-		rdb.appendToFile(fmt.Sprintf("%s%s%s", role, fieldSeparator, strings.Join(userNames, itemSeparator)))
+		rdb.appendToFile(fmt.Sprintf("%s%s%s", role, FieldSeparator, strings.Join(userNames, ItemSeparator)))
 	}
 	return nil
 }
@@ -150,8 +168,9 @@ func (rdb *RoleDB) DeleteRole(role string) error {
 		return fmt.Errorf("no such role: %s", role)
 	}
 	delete(rdb.roles, role)
+
 	if rdb.fileName != "" {
-		rdb.appendToFile(fmt.Sprintf("%s%s%s", "DELETE", fieldSeparator, role))
+		rdb.appendToFile(fmt.Sprintf("%s%s%s", "DELETE", FieldSeparator, role))
 	}
 	return nil
 }
@@ -171,16 +190,20 @@ func (rdb *RoleDB) DeleteUserRole(role, userName string) error {
 		return fmt.Errorf("no such role for user: %s", userName)
 	}
 	delete(userMap, userName)
-	rdb.roles[role] = userMap
+	if len(userMap) > 0 {
+		rdb.roles[role] = userMap
+	} else {
+		delete(rdb.roles, role)
+	}
 
 	if rdb.fileName != "" {
-		rdb.appendToFile(fmt.Sprintf("%s%s%s", "DELETE", fieldSeparator, role))
+		rdb.appendToFile(fmt.Sprintf("%s%s%s", "DELETE", FieldSeparator, role))
 		userNames := []string{}
 		for userName := range userMap {
 			userNames = append(userNames, userName)
 		}
 		sort.Strings(userNames)
-		rdb.appendToFile(fmt.Sprintf("%s%s%s", role, fieldSeparator, strings.Join(userNames, itemSeparator)))
+		rdb.appendToFile(fmt.Sprintf("%s%s%s", role, FieldSeparator, strings.Join(userNames, ItemSeparator)))
 	}
 	return nil
 }
@@ -221,7 +244,7 @@ func (rdb *RoleDB) ListUsers(role string) ([]string, bool) {
 }
 
 // ListRoles list all roles with users
-func (rdb *RoleDB) ListRoles() map[string][]string {
+func (rdb *RoleDB) ListRolesAndUsers() map[string][]string {
 	rdb.mutex.RLock()
 	defer rdb.mutex.RUnlock()
 	res := make(map[string][]string)
@@ -258,7 +281,7 @@ func (rdb *RoleDB) SaveFile() error {
 			userNames = append(userNames, userName)
 		}
 		sort.Strings(userNames)
-		fmt.Fprintf(fh, "%s%s%s\n", role, fieldSeparator, strings.Join(userNames, itemSeparator))
+		fmt.Fprintf(fh, "%s%s%s\n", role, FieldSeparator, strings.Join(userNames, ItemSeparator))
 	}
 	return nil
 }

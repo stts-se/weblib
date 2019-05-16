@@ -66,7 +66,7 @@ func ReadUserDB(fileName string) (*UserDB, error) {
 	defer res.mutex.Unlock()
 
 	for _, l := range lines {
-		fs := strings.Split(l, fieldSeparator)
+		fs := strings.Split(l, FieldSeparator)
 		if fs[0] == "DELETE" {
 			userName := normaliseField(fs[1])
 			if _, exists := res.users[userName]; !exists {
@@ -149,7 +149,7 @@ func (udb *UserDB) InsertUser(userName, password string) error {
 
 	udb.users[userName] = passwordHash
 	if udb.fileName != "" {
-		udb.appendToFile(fmt.Sprintf("%s%s%s", userName, fieldSeparator, passwordHash))
+		udb.appendToFile(fmt.Sprintf("%s%s%s", userName, FieldSeparator, passwordHash))
 	}
 	return nil
 }
@@ -165,7 +165,7 @@ func (udb *UserDB) DeleteUser(userName string) error {
 	}
 	delete(udb.users, userName)
 	if udb.fileName != "" {
-		udb.appendToFile(fmt.Sprintf("%s%s%s", "DELETE", fieldSeparator, userName))
+		udb.appendToFile(fmt.Sprintf("%s%s%s", "DELETE", FieldSeparator, userName))
 	}
 	return nil
 }
@@ -190,8 +190,8 @@ func (udb *UserDB) UpdatePassword(userName string, password string) error {
 
 	udb.users[userName] = passwordHash
 	if udb.fileName != "" {
-		udb.appendToFile(fmt.Sprintf("%s%s%s", "DELETE", fieldSeparator, userName))
-		udb.appendToFile(fmt.Sprintf("%s%s%s", userName, fieldSeparator, passwordHash))
+		udb.appendToFile(fmt.Sprintf("%s%s%s", "DELETE", FieldSeparator, userName))
+		udb.appendToFile(fmt.Sprintf("%s%s%s", userName, FieldSeparator, passwordHash))
 	}
 	return nil
 }
@@ -245,7 +245,7 @@ func (udb *UserDB) SaveFile() error {
 	defer fh.Close()
 
 	for userName, hash := range udb.users {
-		fmt.Fprintf(fh, "%s%s%s\n", userName, fieldSeparator, hash)
+		fmt.Fprintf(fh, "%s%s%s\n", userName, FieldSeparator, hash)
 	}
 	return nil
 }

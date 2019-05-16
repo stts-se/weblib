@@ -110,8 +110,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Auth init failed : %v", err)
 	}
-	fullURL := fmt.Sprintf("%s://%s", protocol, address)
-	authHandlers := AuthHandlers{ServerURL: fullURL, Auth: auth}
+	authHandlers := authHandlers{Auth: auth}
 
 	r := mux.NewRouter()
 	r.StrictSlash(true)
@@ -121,18 +120,18 @@ func main() {
 	r.HandleFunc("/doc/", simpleDoc(r, make(map[string]string)))
 
 	authR := r.PathPrefix("/auth").Subrouter()
-	authR.HandleFunc("/", message("User authorization"))
+	authR.HandleFunc("/", authHandlers.message("User authorization"))
 	authR.HandleFunc("/login", auth.ServeAuthUserOrElse(authHandlers.message("You are already logged in as user ${username}"), authHandlers.login))
 	authR.HandleFunc("/logout", auth.ServeAuthUser(authHandlers.logout))
 	authR.HandleFunc("/signup", authHandlers.signup)
 
 	protectedR := r.PathPrefix("/protected").Subrouter()
 	auth.RequireAuthUser(protectedR)
-	protectedR.HandleFunc("/", message("Protected area (open to all logged-in users)"))
+	protectedR.HandleFunc("/", authHandlers.message("Protected area (open to all logged-in users)"))
 
 	adminR := r.PathPrefix("/admin").Subrouter()
 	auth.RequireAuthRole(adminR, "admin")
-	adminR.HandleFunc("/", message("Admin area (open for admin users)"))
+	adminR.HandleFunc("/", authHandlers.message("Admin area (open for admin users)"))
 	adminR.HandleFunc("/invite", authHandlers.invite)
 	protectedR.HandleFunc("/list_users", authHandlers.listUsers)
 

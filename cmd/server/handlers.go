@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
+
+	"github.com/stts-se/weblib"
 )
 
 func message(msg string) http.HandlerFunc {
@@ -24,6 +26,7 @@ func httpError(httpStatusCode int) http.HandlerFunc {
 func logging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Request: %v", r)
+		log.Printf("Request URL: %s", weblib.GetRequestURL(r))
 		next.ServeHTTP(w, r)
 	})
 }

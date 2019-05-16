@@ -10,13 +10,11 @@ import (
 	"github.com/stts-se/weblib/auth"
 )
 
-// AuthHandlers a set of handlers for user authorization
-type AuthHandlers struct {
-	ServerURL string
-	Auth      *auth.Auth
+type authHandlers struct {
+	Auth *auth.Auth
 }
 
-func (a *AuthHandlers) helloWorld(w http.ResponseWriter, r *http.Request) {
+func (a *authHandlers) helloWorld(w http.ResponseWriter, r *http.Request) {
 	var msg string
 	if ok, userName := a.Auth.IsLoggedIn(r); ok {
 		msg = fmt.Sprintf("Hello, you are logged in as user %s!", userName)
@@ -26,7 +24,7 @@ func (a *AuthHandlers) helloWorld(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%s\n", msg)
 }
 
-func (a *AuthHandlers) message(msg string) http.HandlerFunc {
+func (a *authHandlers) message(msg string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if ok, uName := a.Auth.IsLoggedIn(r); ok {
 			msg = strings.Replace(msg, "${username}", uName, -1)
@@ -35,7 +33,7 @@ func (a *AuthHandlers) message(msg string) http.HandlerFunc {
 	}
 }
 
-func (a *AuthHandlers) login(w http.ResponseWriter, r *http.Request) {
+func (a *authHandlers) login(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		http.ServeFile(w, r, "static/auth/login.html")
@@ -63,8 +61,7 @@ func (a *AuthHandlers) login(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (a *AuthHandlers) invite(w http.ResponseWriter, r *http.Request) {
-
+func (a *authHandlers) invite(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		http.ServeFile(w, r, "static/auth/invite.html")
@@ -77,7 +74,7 @@ func (a *AuthHandlers) invite(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		link := fmt.Sprintf("%s/auth/signup?token=%s", a.ServerURL, token)
+		link := fmt.Sprintf("%s/auth/signup?token=%s", weblib.GetServerURL(r), token)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		log.Printf("Created invitation link: %s", link)
 		fmt.Fprintf(w, "Invitation link: <a href='%s'>%s</a>\n", link, link)
@@ -86,7 +83,7 @@ func (a *AuthHandlers) invite(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (a *AuthHandlers) signup(w http.ResponseWriter, r *http.Request) {
+func (a *authHandlers) signup(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		http.ServeFile(w, r, "static/auth/signup.html")
@@ -115,7 +112,7 @@ func (a *AuthHandlers) signup(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (a *AuthHandlers) logout(w http.ResponseWriter, r *http.Request) {
+func (a *authHandlers) logout(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		http.ServeFile(w, r, "static/auth/logout.html")
@@ -135,7 +132,7 @@ func (a *AuthHandlers) logout(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (a *AuthHandlers) listUsers(w http.ResponseWriter, r *http.Request) {
+func (a *authHandlers) listUsers(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Users\n")
 	for _, uName := range a.Auth.ListUsers() {
 		fmt.Fprintf(w, "- %s\n", uName)

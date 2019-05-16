@@ -39,7 +39,7 @@
 		    <tr>
 			<td colspan="3" align="right">
 			    <input id="token" type="text" name="token" hidden required/>
-			    <button type="submit">Register</button>
+			    <button id="submit" type="submit">Register</button>
 			</td>
 		    </tr>
 		    
@@ -47,7 +47,7 @@
 
 	    </form>
 
-	    <ul style="list-style: none;" id="errors"/>
+	    <ul style="list-style: none; padding-left: 0;" id="errors"/>
 	    
 	</div>
 
@@ -55,7 +55,12 @@
 	 var url = new URL(document.URL);
 	 var token = url.searchParams.get("token");
 	 document.getElementById("token").value = token;
-	 //console.log("Parsed token: " + document.getElementById("token").value);
+	 if (token === null || token === undefined || token.trim().length()===1) {
+	     document.getElementById("submit").setAttribute("disabled","disabled");
+	     const li = document.createElement("li");
+	     li.innerText = "Undefined signup token"
+	     document.getElementById('errors').appendChild(li);
+	 }
 	 document.getElementById("username").focus();
 
 	 document.getElementById('form').onsubmit = function() {
