@@ -6,12 +6,13 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/stts-se/weblib/server"
+	"github.com/stts-se/weblib"
+	"github.com/stts-se/weblib/auth"
 )
 
 type AuthHandlers struct {
 	ServerURL string
-	Auth      *server.Auth
+	Auth      *auth.Auth
 }
 
 func (a *AuthHandlers) helloWorld(w http.ResponseWriter, r *http.Request) {
@@ -39,7 +40,7 @@ func (a *AuthHandlers) login(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "static/auth/login.html")
 		return
 	case "POST":
-		form, ok := server.ParseForm(r, []string{"username", "password"})
+		form, ok := weblib.ParseForm(r, []string{"username", "password"})
 		userName := form["username"]
 		password := form["password"]
 		if !ok {
@@ -90,7 +91,7 @@ func (a *AuthHandlers) signup(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "static/auth/signup.html")
 		return
 	case "POST":
-		form, ok := server.ParseForm(r, []string{"username", "password", "token"})
+		form, ok := weblib.ParseForm(r, []string{"username", "password", "token"})
 		userName := form["username"]
 		password := form["password"]
 		token := form["token"]

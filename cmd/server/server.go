@@ -12,12 +12,12 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"github.com/stts-se/weblib/server"
+	"github.com/stts-se/weblib/auth"
 )
 
 type Server struct {
 	httpServer *http.Server
-	auth       *server.Auth
+	auth       *auth.Auth
 	protocol   string
 	tlsEnabled bool
 }
@@ -105,7 +105,7 @@ func main() {
 		log.Fatalf("UserDB init failed : %v", err)
 	}
 
-	auth, err := server.NewAuth("auth-user-weblib", userDB, roleDB, cookieStore)
+	auth, err := auth.NewAuth("auth-user-weblib", userDB, roleDB, cookieStore)
 	if err != nil {
 		log.Fatalf("Auth init failed : %v", err)
 	}
