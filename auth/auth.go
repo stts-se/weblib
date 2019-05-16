@@ -156,7 +156,7 @@ func (a *Auth) Logout(w http.ResponseWriter, r *http.Request) (string, error) {
 	return userName, nil
 }
 
-// IsLoggedIn : check if the user is logged in. Second return value is the normalised version of the input user name.
+// IsLoggedIn : Check if there the user is logged in. Second return value is the user name.
 func (a *Auth) IsLoggedIn(r *http.Request) (bool, string) {
 	session, err := a.cookieStore.Get(r, a.sessionName)
 	if err != nil {
@@ -168,7 +168,7 @@ func (a *Auth) IsLoggedIn(r *http.Request) (bool, string) {
 	return false, ""
 }
 
-// IsLoggedInWithRole
+// IsLoggedInWithRole : check if the user is logged in with the specified role
 func (a *Auth) IsLoggedInWithRole(r *http.Request, roleName string) bool {
 	if ok, authUser := a.IsLoggedIn(r); ok && authUser != "" {
 		if a.roleDB.Authorized(roleName, authUser) {
