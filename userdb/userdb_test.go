@@ -137,7 +137,7 @@ func Test_UserDB_File(t *testing.T) {
 		t.Errorf("%s", strings.Join(lines, "\n"))
 	}
 
-	lines, err = readLines("test_files/userdb_test_file_does_not_exist")
+	_, err = readLines("test_files/userdb_test_file_does_not_exist")
 	if err == nil {
 		t.Errorf("Fail: expected error here")
 	}
