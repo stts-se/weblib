@@ -147,6 +147,7 @@ func (a *authHandlers) signup(w http.ResponseWriter, r *http.Request) {
 
 const stripLocaleRegion = true
 
+// TODO: Move to i18n library?
 func getLocaleFromRequest(r *http.Request) *i18n.I18N {
 	locName := weblib.GetParam(r, "locale")
 	if locName == "" {

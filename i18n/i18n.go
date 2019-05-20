@@ -1,3 +1,4 @@
+// Package i18n contains locale/i18n utilities for web applications
 package i18n
 
 import (
