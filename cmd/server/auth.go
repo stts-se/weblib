@@ -99,7 +99,7 @@ func (a *authHandlers) signup(w http.ResponseWriter, r *http.Request) {
 	cli18n := getLocaleFromRequest(r)
 	switch r.Method {
 	case "GET":
-		token, err := url.PathUnescape(weblib.GetParam("token", r))
+		token, err := url.PathUnescape(weblib.GetParam(r, "token"))
 		if err != nil {
 			log.Printf("Couldn't unescape token : %v", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -148,7 +148,7 @@ func (a *authHandlers) signup(w http.ResponseWriter, r *http.Request) {
 const stripLocaleRegion = true
 
 func getLocaleFromRequest(r *http.Request) *i18n.I18N {
-	locName := weblib.GetParam("locale", r)
+	locName := weblib.GetParam(r, "locale")
 	if locName == "" {
 		cookie, err := r.Cookie("locale")
 		log.Printf("Locale cookie from request: %#v", cookie)

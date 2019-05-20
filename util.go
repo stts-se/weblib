@@ -13,7 +13,7 @@ import (
 )
 
 // GetParam : get request params
-func GetParam(paramName string, r *http.Request) string {
+func GetParam(r *http.Request, paramName string) string {
 	res := r.FormValue(paramName)
 	if res != "" {
 		return res
