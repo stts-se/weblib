@@ -8,6 +8,7 @@ import (
 	"github.com/stts-se/weblib/i18n"
 )
 
+// TemplateData used to execute a html/template/Template. If properly used, it will fill in the correct i18n values in the template
 type TemplateData struct {
 	Loc  *i18n.I18N
 	Data interface{}

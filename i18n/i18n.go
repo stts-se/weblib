@@ -17,6 +17,7 @@ import (
 // I18N a key-value dictionary container for a certain locale
 type I18N map[string]string
 
+// S is used to look up the localized version of the param. It will also fill in the values using fmt.Sprintf.
 func (i *I18N) S(param string, values ...string) string {
 	res := param
 	if r, ok := (*i)[param]; ok {
