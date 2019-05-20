@@ -36,7 +36,13 @@ func (a *authHandlers) message(msg string) http.HandlerFunc {
 func (a *authHandlers) login(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		http.ServeFile(w, r, "static/auth/login.html")
+		//http.ServeFile(w, r, "static/auth/login.html")
+		data := struct{ Title string }{Title: "Login"}
+		err := executeTemplate(strings.ToLower(data.Title), data, w)
+		if err != nil {
+			log.Printf("Couldn't execute template : %v", err)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+		}
 		return
 	case "POST":
 		form, ok := weblib.ParseForm(r, []string{"username", "password"})
@@ -64,7 +70,13 @@ func (a *authHandlers) login(w http.ResponseWriter, r *http.Request) {
 func (a *authHandlers) invite(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		http.ServeFile(w, r, "static/auth/invite.html")
+		//http.ServeFile(w, r, "static/auth/invite.html")
+		data := struct{ Title string }{Title: "Invite"}
+		err := executeTemplate(strings.ToLower(data.Title), data, w)
+		if err != nil {
+			log.Printf("Couldn't execute template : %v", err)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+		}
 		return
 	case "POST":
 		token, err := a.Auth.CreateSingleUseToken()
@@ -86,7 +98,13 @@ func (a *authHandlers) invite(w http.ResponseWriter, r *http.Request) {
 func (a *authHandlers) signup(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		http.ServeFile(w, r, "static/auth/signup.html")
+		//http.ServeFile(w, r, "static/auth/signup.html")
+		data := struct{ Title string }{Title: "Signup"}
+		err := executeTemplate(strings.ToLower(data.Title), data, w)
+		if err != nil {
+			log.Printf("Couldn't execute template : %v", err)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+		}
 		return
 	case "POST":
 		form, ok := weblib.ParseForm(r, []string{"username", "password", "token"})
@@ -115,7 +133,13 @@ func (a *authHandlers) signup(w http.ResponseWriter, r *http.Request) {
 func (a *authHandlers) logout(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		http.ServeFile(w, r, "static/auth/logout.html")
+		//http.ServeFile(w, r, "static/auth/logout.html")
+		data := struct{ Title string }{Title: "Logout"}
+		err := executeTemplate(strings.ToLower(data.Title), data, w)
+		if err != nil {
+			log.Printf("Couldn't execute template : %v", err)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+		}
 		return
 	case "POST":
 		userName, err := a.Auth.Logout(w, r)

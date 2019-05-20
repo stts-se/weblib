@@ -1,9 +1,13 @@
 package weblib
 
 import (
+	"bufio"
+	"compress/gzip"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/gorilla/mux"
 )
@@ -59,4 +63,40 @@ func GetRequestURL(r *http.Request) string {
 //GetServerURL get the server URL protocol://host:port
 func GetServerURL(r *http.Request) string {
 	return fmt.Sprintf("%s://%s\n", getProtocol(r), r.Host)
+}
+
+//ReadLines read a file into a slice of lines
+func ReadLines(fileName string) ([]string, error) {
+	var res []string
+	var scanner *bufio.Scanner
+	fh, err := os.Open(fileName)
+	if err != nil {
+		return res, fmt.Errorf("failed to read '%s' : %v", fileName, err)
+	}
+
+	if strings.HasSuffix(fileName, ".gz") {
+		gz, err := gzip.NewReader(fh)
+		if err != nil {
+			return res, fmt.Errorf("failed to read '%s' : %v", fileName, err)
+		}
+		scanner = bufio.NewScanner(gz)
+	} else {
+		scanner = bufio.NewScanner(fh)
+	}
+	for scanner.Scan() {
+		res = append(res, scanner.Text())
+	}
+	if err := scanner.Err(); err != nil {
+		return res, fmt.Errorf("failed to read '%s' : %v", fileName, err)
+	}
+	return res, nil
+}
+
+//ReadFile read a file into a single string
+func ReadFile(fileName string) (string, error) {
+	lines, err := ReadLines(fileName)
+	if err != nil {
+		return "", err
+	}
+	return strings.Join(lines, "\n"), nil
 }
