@@ -150,6 +150,13 @@ const stripLocaleRegion = true
 func getLocaleFromRequest(r *http.Request) *i18n.I18N {
 	locName := weblib.GetParam("locale", r)
 	if locName == "" {
+		cookie, err := r.Cookie("locale")
+		log.Printf("Locale cookie from request: %#v", cookie)
+		if err == nil {
+			locName = cookie.Value
+		}
+	}
+	if locName == "" {
 		acceptLangs := r.Header["Accept-Language"]
 		if len(acceptLangs) > 0 {
 			locName = strings.Split(acceptLangs[0], ",")[0]
