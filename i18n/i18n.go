@@ -12,6 +12,9 @@ import (
 	"github.com/stts-se/weblib"
 )
 
+// see also https://blog.golang.org/matchlang
+
+// I18N a key-value dictionary container for a certain locale
 type I18N map[string]string
 
 func (i *I18N) S(param string, values ...string) string {
@@ -25,14 +28,15 @@ func (i *I18N) S(param string, values ...string) string {
 	return fmt.Sprintf(res, values)
 }
 
-// see also https://blog.golang.org/matchlang
-
+// I18Ns the cached localisation dictionaries
 var I18Ns = make(map[string]*I18N)
 
+// DefaultLocale a default locale (string) for when it's not set by the user
 const DefaultLocale = "en"
 const i18nDir = "i18n"
 const i18nExtension = ".properties"
 
+// Default I18N instance for DefaultLocale
 func Default() *I18N {
 	return GetOrCreate(DefaultLocale)
 }
@@ -47,10 +51,12 @@ func sortedKeys(m map[string]*I18N) []string {
 	return res
 }
 
+// ListLocales list all locale (names)
 func ListLocales() []string {
 	return sortedKeys(I18Ns)
 }
 
+// GetOrCreate get the I18N instance for the locale, create if necessary
 func GetOrCreate(locale string) *I18N {
 	if _, ok := I18Ns[locale]; !ok {
 		loc := I18N(make(map[string]string))
@@ -60,6 +66,7 @@ func GetOrCreate(locale string) *I18N {
 	return loc
 }
 
+// ReadI18NPropFiles read all i18n property files in the folder i18nDir (see source code)
 func ReadI18NPropFiles() error {
 	files, err := ioutil.ReadDir(i18nDir)
 	if err != nil {
