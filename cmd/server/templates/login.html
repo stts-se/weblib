@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 
-    <head><title>{{.Title}}</title></head>
+    <head><title>{{.Loc.S "Login"}}</title></head>
 
     <body>
 	<div>
@@ -10,25 +10,25 @@
 		<table>
 		    <tr>
 			<td>
-			    <label for="username">Username</label>
+			    <label for="username">{{.Loc.S "Username"}}</label>
 			</td>
 			<td>
-			    <input id="username" type="text" placeholder="Enter username" name="username" required="required">
+			    <input id="username" type="text" placeholder="{{.Loc.S "Enter username"}}" name="username" required="required">
 			</td>
 		    </tr>
 
 		    <tr>
 			<td>
-			    <label for="password">Password</label>
+			    <label for="password">{{.Loc.S "Password"}}</label>
 			</td>
 			<td>
-			    <input id="password" type="password" placeholder="Enter password" name="password" required="required">
+			    <input id="password" type="password" placeholder="{{.Loc.S "Enter password"}}" name="password" required="required">
 			</td>
 		    </tr>
 
 		    <tr>
 			<td colspan="2" align="right">
-			    <button type="submit">Login</button>
+			    <button type="submit">{{.Loc.S "Login"}}</button>
 			</td>
 		    </tr>		    
 		</table>

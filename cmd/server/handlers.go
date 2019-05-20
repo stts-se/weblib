@@ -10,11 +10,13 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/stts-se/weblib"
+	"github.com/stts-se/weblib/i18n"
 )
 
 func message(msg string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "%s\n", msg)
+		cli18n := getLocaleFromRequest(r)
+		fmt.Fprintf(w, cli18n.S("%s")+"\n", msg)
 	}
 }
 
@@ -26,7 +28,7 @@ func httpError(httpStatusCode int) http.HandlerFunc {
 
 func logging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("Request: %v", r)
+		log.Printf("Request: %#v", r)
 		log.Printf("Request URL: %s", weblib.GetRequestURL(r))
 		next.ServeHTTP(w, r)
 	})
@@ -77,4 +79,16 @@ func about(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	fmt.Fprintf(w, "<table>%s</table>\n", strings.Join(lines, "\n"))
+}
+
+func listLocales(w http.ResponseWriter, r *http.Request) {
+	cli18n := getLocaleFromRequest(r)
+	fmt.Fprintf(w, cli18n.S("Locales")+"\n")
+	for _, loc := range i18n.ListLocales() {
+		if loc == i18n.DefaultLocale {
+			fmt.Fprintf(w, "- %s (default)\n", loc)
+		} else {
+			fmt.Fprintf(w, "- %s\n", loc)
+		}
+	}
 }

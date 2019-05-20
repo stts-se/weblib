@@ -9,6 +9,7 @@ import (
 
 	"github.com/stts-se/weblib"
 	"github.com/stts-se/weblib/auth"
+	"github.com/stts-se/weblib/i18n"
 )
 
 type authHandlers struct {
@@ -35,10 +36,10 @@ func (a *authHandlers) message(msg string) http.HandlerFunc {
 }
 
 func (a *authHandlers) login(w http.ResponseWriter, r *http.Request) {
+	cli18n := getLocaleFromRequest(r)
 	switch r.Method {
 	case "GET":
-		data := struct{ Title string }{Title: "Login"}
-		err := templates.ExecuteTemplate(w, fmt.Sprintf("%s.html", strings.ToLower(data.Title)), data)
+		err := templates.ExecuteTemplate(w, "login.html", TemplateData{Loc: cli18n})
 		if err != nil {
 			log.Printf("Couldn't execute template : %v", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -59,7 +60,7 @@ func (a *authHandlers) login(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		log.Printf("User %s logged in successfully", userName)
-		fmt.Fprintf(w, "Logged in successfully as user %s\n", userName)
+		fmt.Fprintf(w, cli18n.S("Logged in successfully as user %s")+"\n", userName)
 		return
 
 	default:
@@ -68,10 +69,10 @@ func (a *authHandlers) login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *authHandlers) invite(w http.ResponseWriter, r *http.Request) {
+	cli18n := getLocaleFromRequest(r)
 	switch r.Method {
 	case "GET":
-		data := struct{ Title string }{Title: "Invite"}
-		err := templates.ExecuteTemplate(w, fmt.Sprintf("%s.html", strings.ToLower(data.Title)), data)
+		err := templates.ExecuteTemplate(w, "invite.html", TemplateData{Loc: cli18n})
 		if err != nil {
 			log.Printf("Couldn't execute template : %v", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -88,13 +89,14 @@ func (a *authHandlers) invite(w http.ResponseWriter, r *http.Request) {
 		link := fmt.Sprintf("%s/auth/signup?token=%s", weblib.GetServerURL(r), url.PathEscape(token))
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		log.Printf("Created invitation link: %s", link)
-		fmt.Fprintf(w, "Invitation link: <a href='%s'>%s</a>\n", link, link)
+		fmt.Fprintf(w, fmt.Sprintf("%s: <a href='%s'>%s</a>\n", cli18n.S("Invitation link"), link, link))
 	default:
 		http.NotFound(w, r)
 	}
 }
 
 func (a *authHandlers) signup(w http.ResponseWriter, r *http.Request) {
+	cli18n := getLocaleFromRequest(r)
 	switch r.Method {
 	case "GET":
 		token, err := url.PathUnescape(weblib.GetParam("token", r))
@@ -112,14 +114,8 @@ func (a *authHandlers) signup(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Invalid token", http.StatusUnauthorized)
 			return
 		}
-		data := struct {
-			Title string
-			Token string
-		}{
-			Title: "Signup",
-			Token: token,
-		}
-		err = templates.ExecuteTemplate(w, fmt.Sprintf("%s.html", strings.ToLower(data.Title)), data)
+		data := struct{ Token string }{Token: token}
+		err = templates.ExecuteTemplate(w, "signup.html", TemplateData{Loc: cli18n, Data: data})
 		if err != nil {
 			log.Printf("Couldn't execute template : %v", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -141,7 +137,7 @@ func (a *authHandlers) signup(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		log.Printf("Created used %s", userName)
-		fmt.Fprintf(w, "Created user %s\n", userName)
+		fmt.Fprintf(w, cli18n.S("Created user %s")+"\n", userName)
 		return
 
 	default:
@@ -149,11 +145,31 @@ func (a *authHandlers) signup(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+const stripLocaleRegion = true
+
+func getLocaleFromRequest(r *http.Request) *i18n.I18N {
+	locName := weblib.GetParam("locale", r)
+	if locName == "" {
+		acceptLangs := r.Header["Accept-Language"]
+		if len(acceptLangs) > 0 {
+			locName = strings.Split(acceptLangs[0], ",")[0]
+		}
+	}
+	log.Printf("Locale from request: %s", locName)
+	if locName != "" {
+		if stripLocaleRegion {
+			locName = strings.Split(locName, "-")[0]
+		}
+		return i18n.GetOrCreate(locName)
+	}
+	return i18n.Default()
+}
+
 func (a *authHandlers) logout(w http.ResponseWriter, r *http.Request) {
+	cli18n := getLocaleFromRequest(r)
 	switch r.Method {
 	case "GET":
-		data := struct{ Title string }{Title: "Logout"}
-		err := templates.ExecuteTemplate(w, fmt.Sprintf("%s.html", strings.ToLower(data.Title)), data)
+		err := templates.ExecuteTemplate(w, "logout.html", TemplateData{Loc: cli18n})
 		if err != nil {
 			log.Printf("Couldn't execute template : %v", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -168,14 +184,15 @@ func (a *authHandlers) logout(w http.ResponseWriter, r *http.Request) {
 		}
 
 		log.Printf("User %s logged out successfully", userName)
-		fmt.Fprintf(w, "Logged out user %s successfully\n", userName)
+		fmt.Fprintf(w, cli18n.S("Logged out user %s successfully")+"\n", userName)
 	default:
 		http.NotFound(w, r)
 	}
 }
 
 func (a *authHandlers) listUsers(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Users\n")
+	cli18n := getLocaleFromRequest(r)
+	fmt.Fprintf(w, cli18n.S("Users")+"\n")
 	for _, uName := range a.Auth.ListUsers() {
 		fmt.Fprintf(w, "- %s\n", uName)
 	}

@@ -1,6 +1,6 @@
 <html>
 
-    <head><title>{{.Title}}</title></head>
+    <head><title>{{.Loc.S "Signup"}}</title></head>
 
     <body>
 
@@ -12,33 +12,33 @@
 
 		    <tr>
 			<td>
-			    <label for="username">Username</label>
+			    <label for="username">{{.Loc.S "Username"}}</label>
 			</td>
 			<td>
-			    <input id="username" type="text" placeholder="Enter username" name="username" required="required">
+			    <input id="username" type="text" placeholder="{{.Loc.S "Enter username"}}" name="username" required="required">
 			</td>
 		    </tr>
 
 		    <tr>
 			<td>
-			    <label for="password">Password</label>
+			    <label for="password">{{.Loc.S "Password"}}</label>
 			</td>
 			<td>
-			    <input id="password" type="password" placeholder="Enter password" name="password" required="required">
+			    <input id="password" type="password" placeholder="{{.Loc.S "Enter password"}}" name="password" required="required">
 			</td>
 		    </tr>
 
 		    <tr>
 			<td></td>
 			<td>
-			    <input id="password2" type="password" placeholder="Repeat password" name="password2" required="required">
+			    <input id="password2" type="password" placeholder="{{.Loc.S "Repeat password"}}" name="password2" required="required">
 			</td>
 		    </tr>
 
 		    <tr>
 			<td colspan="3" align="right">
 			    <input id="token" type="text" name="token" hidden required="required" value="{{.Token}}" />
-			    <button id="submit" type="submit">Register</button>
+			    <button id="submit" type="submit">{{.Loc.S "Register"}}</button>
 			</td>
 		    </tr>
 		    

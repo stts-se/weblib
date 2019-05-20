@@ -13,6 +13,7 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/stts-se/weblib/auth"
+	"github.com/stts-se/weblib/i18n"
 )
 
 // Server container
@@ -85,6 +86,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	err = i18n.ReadI18NPropFiles()
+	if err != nil {
+		log.Fatalf("Couldn't read i18n properties : %v", err)
+	}
+
 	tlsEnabled := false
 	protocol := "http"
 	if *tlsCert != "" && *tlsKey != "" {
@@ -135,6 +141,9 @@ func main() {
 	protectedR := r.PathPrefix("/protected").Subrouter()
 	auth.RequireAuthUser(protectedR)
 	protectedR.HandleFunc("/", authHandlers.message("Protected area (open to all logged-in users)"))
+
+	localeR := r.PathPrefix("/locale").Subrouter()
+	localeR.HandleFunc("/list", listLocales)
 
 	adminR := r.PathPrefix("/admin").Subrouter()
 	auth.RequireAuthRole(adminR, "admin")
