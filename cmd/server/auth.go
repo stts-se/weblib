@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/stts-se/weblib"
@@ -36,9 +37,8 @@ func (a *authHandlers) message(msg string) http.HandlerFunc {
 func (a *authHandlers) login(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		//http.ServeFile(w, r, "static/auth/login.html")
 		data := struct{ Title string }{Title: "Login"}
-		err := executeTemplate(strings.ToLower(data.Title), data, w)
+		err := templates.ExecuteTemplate(w, fmt.Sprintf("%s.html", strings.ToLower(data.Title)), data)
 		if err != nil {
 			log.Printf("Couldn't execute template : %v", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -70,9 +70,8 @@ func (a *authHandlers) login(w http.ResponseWriter, r *http.Request) {
 func (a *authHandlers) invite(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		//http.ServeFile(w, r, "static/auth/invite.html")
 		data := struct{ Title string }{Title: "Invite"}
-		err := executeTemplate(strings.ToLower(data.Title), data, w)
+		err := templates.ExecuteTemplate(w, fmt.Sprintf("%s.html", strings.ToLower(data.Title)), data)
 		if err != nil {
 			log.Printf("Couldn't execute template : %v", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -86,7 +85,7 @@ func (a *authHandlers) invite(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		link := fmt.Sprintf("%s/auth/signup?token=%s", weblib.GetServerURL(r), token)
+		link := fmt.Sprintf("%s/auth/signup?token=%s", weblib.GetServerURL(r), url.PathEscape(token))
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		log.Printf("Created invitation link: %s", link)
 		fmt.Fprintf(w, "Invitation link: <a href='%s'>%s</a>\n", link, link)
@@ -98,9 +97,29 @@ func (a *authHandlers) invite(w http.ResponseWriter, r *http.Request) {
 func (a *authHandlers) signup(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		//http.ServeFile(w, r, "static/auth/signup.html")
-		data := struct{ Title string }{Title: "Signup"}
-		err := executeTemplate(strings.ToLower(data.Title), data, w)
+		token, err := url.PathUnescape(weblib.GetParam("token", r))
+		if err != nil {
+			log.Printf("Couldn't unescape token : %v", err)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+		}
+		if len(token) == 0 {
+			log.Printf("Empty token")
+			http.Error(w, "Invalid token", http.StatusUnauthorized)
+			return
+		}
+		if len(token) < 10 {
+			log.Printf("Invalid token")
+			http.Error(w, "Invalid token", http.StatusUnauthorized)
+			return
+		}
+		data := struct {
+			Title string
+			Token string
+		}{
+			Title: "Signup",
+			Token: token,
+		}
+		err = templates.ExecuteTemplate(w, fmt.Sprintf("%s.html", strings.ToLower(data.Title)), data)
 		if err != nil {
 			log.Printf("Couldn't execute template : %v", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -133,9 +152,8 @@ func (a *authHandlers) signup(w http.ResponseWriter, r *http.Request) {
 func (a *authHandlers) logout(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		//http.ServeFile(w, r, "static/auth/logout.html")
 		data := struct{ Title string }{Title: "Logout"}
-		err := executeTemplate(strings.ToLower(data.Title), data, w)
+		err := templates.ExecuteTemplate(w, fmt.Sprintf("%s.html", strings.ToLower(data.Title)), data)
 		if err != nil {
 			log.Printf("Couldn't execute template : %v", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)

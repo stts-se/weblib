@@ -15,7 +15,7 @@
 			    <label for="username">Username</label>
 			</td>
 			<td>
-			    <input id="username" type="text" placeholder="Enter username" name="username" required>
+			    <input id="username" type="text" placeholder="Enter username" name="username" required="required">
 			</td>
 		    </tr>
 
@@ -24,20 +24,20 @@
 			    <label for="password">Password</label>
 			</td>
 			<td>
-			    <input id="password" type="password" placeholder="Enter password" name="password" required>
+			    <input id="password" type="password" placeholder="Enter password" name="password" required="required">
 			</td>
 		    </tr>
 
 		    <tr>
 			<td></td>
 			<td>
-			    <input id="password2" type="password" placeholder="Repeat password" name="password2" required>
+			    <input id="password2" type="password" placeholder="Repeat password" name="password2" required="required">
 			</td>
 		    </tr>
 
 		    <tr>
 			<td colspan="3" align="right">
-			    <input id="token" type="text" name="token" hidden required/>
+			    <input id="token" type="text" name="token" hidden required="required" value="{{.Token}}" />
 			    <button id="submit" type="submit">Register</button>
 			</td>
 		    </tr>
@@ -51,15 +51,6 @@
 	</div>
 
 	<script>	 
-	 var url = new URL(document.URL);
-	 var token = url.searchParams.get("token");
-	 document.getElementById("token").value = token;
-	 if (token === null || token === undefined || token.trim().length()===1) {
-	     document.getElementById("submit").setAttribute("disabled","disabled");
-	     const li = document.createElement("li");
-	     li.innerText = "Undefined signup token"
-	     document.getElementById('errors').appendChild(li);
-	 }
 	 document.getElementById("username").focus();
 
 	 document.getElementById('form').onsubmit = function() {
@@ -79,6 +70,12 @@
 	     if (document.getElementById('password').value.length < 5) {
 		 const li = document.createElement("li");
 		 li.innerText = "Password too short"
+		 document.getElementById('errors').appendChild(li);
+		 result = false;
+	     }	     
+	     if (document.getElementById('token').value.length < 1) {
+		 const li = document.createElement("li");
+		 li.innerText = "Undefined signup token"
 		 document.getElementById('errors').appendChild(li);
 		 result = false;
 	     }
