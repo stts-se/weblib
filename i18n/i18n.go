@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"path"
 	"path/filepath"
 	"sort"
@@ -101,4 +102,32 @@ func ReadI18NPropFiles() error {
 		I18Ns[DefaultLocale] = &loc
 	}
 	return nil
+}
+
+const stripLocaleRegion = true
+
+// GetLocaleFromRequest retrieve locale from http.Request (reads (1) URL params, (2) cookies, (3) request header)
+func GetLocaleFromRequest(r *http.Request) *I18N {
+	locName := weblib.GetParam(r, "locale")
+	if locName == "" {
+		cookie, err := r.Cookie("locale")
+		log.Printf("Locale cookie from request: %#v", cookie)
+		if err == nil {
+			locName = cookie.Value
+		}
+	}
+	if locName == "" {
+		acceptLangs := r.Header["Accept-Language"]
+		if len(acceptLangs) > 0 {
+			locName = strings.Split(acceptLangs[0], ",")[0]
+		}
+	}
+	log.Printf("Locale from request: %s", locName)
+	if locName != "" {
+		if stripLocaleRegion {
+			locName = strings.Split(locName, "-")[0]
+		}
+		return GetOrCreate(locName)
+	}
+	return Default()
 }

@@ -15,7 +15,7 @@ import (
 
 func message(msg string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		cli18n := getLocaleFromRequest(r)
+		cli18n := i18n.GetLocaleFromRequest(r)
 		fmt.Fprintf(w, cli18n.S("%s")+"\n", msg)
 	}
 }
@@ -82,7 +82,7 @@ func about(w http.ResponseWriter, r *http.Request) {
 }
 
 func listLocales(w http.ResponseWriter, r *http.Request) {
-	cli18n := getLocaleFromRequest(r)
+	cli18n := i18n.GetLocaleFromRequest(r)
 	fmt.Fprintf(w, cli18n.S("Locales")+"\n")
 	for _, loc := range i18n.ListLocales() {
 		if loc == i18n.DefaultLocale {

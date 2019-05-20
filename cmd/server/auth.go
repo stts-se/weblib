@@ -36,7 +36,7 @@ func (a *authHandlers) message(msg string) http.HandlerFunc {
 }
 
 func (a *authHandlers) login(w http.ResponseWriter, r *http.Request) {
-	cli18n := getLocaleFromRequest(r)
+	cli18n := i18n.GetLocaleFromRequest(r)
 	switch r.Method {
 	case "GET":
 		err := templates.ExecuteTemplate(w, "login.html", TemplateData{Loc: cli18n})
@@ -69,7 +69,7 @@ func (a *authHandlers) login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *authHandlers) invite(w http.ResponseWriter, r *http.Request) {
-	cli18n := getLocaleFromRequest(r)
+	cli18n := i18n.GetLocaleFromRequest(r)
 	switch r.Method {
 	case "GET":
 		err := templates.ExecuteTemplate(w, "invite.html", TemplateData{Loc: cli18n})
@@ -96,7 +96,7 @@ func (a *authHandlers) invite(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *authHandlers) signup(w http.ResponseWriter, r *http.Request) {
-	cli18n := getLocaleFromRequest(r)
+	cli18n := i18n.GetLocaleFromRequest(r)
 	switch r.Method {
 	case "GET":
 		token, err := url.PathUnescape(weblib.GetParam(r, "token"))
@@ -145,36 +145,8 @@ func (a *authHandlers) signup(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-const stripLocaleRegion = true
-
-// TODO: Move to i18n library?
-func getLocaleFromRequest(r *http.Request) *i18n.I18N {
-	locName := weblib.GetParam(r, "locale")
-	if locName == "" {
-		cookie, err := r.Cookie("locale")
-		log.Printf("Locale cookie from request: %#v", cookie)
-		if err == nil {
-			locName = cookie.Value
-		}
-	}
-	if locName == "" {
-		acceptLangs := r.Header["Accept-Language"]
-		if len(acceptLangs) > 0 {
-			locName = strings.Split(acceptLangs[0], ",")[0]
-		}
-	}
-	log.Printf("Locale from request: %s", locName)
-	if locName != "" {
-		if stripLocaleRegion {
-			locName = strings.Split(locName, "-")[0]
-		}
-		return i18n.GetOrCreate(locName)
-	}
-	return i18n.Default()
-}
-
 func (a *authHandlers) logout(w http.ResponseWriter, r *http.Request) {
-	cli18n := getLocaleFromRequest(r)
+	cli18n := i18n.GetLocaleFromRequest(r)
 	switch r.Method {
 	case "GET":
 		err := templates.ExecuteTemplate(w, "logout.html", TemplateData{Loc: cli18n})
@@ -199,7 +171,7 @@ func (a *authHandlers) logout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *authHandlers) listUsers(w http.ResponseWriter, r *http.Request) {
-	cli18n := getLocaleFromRequest(r)
+	cli18n := i18n.GetLocaleFromRequest(r)
 	fmt.Fprintf(w, cli18n.S("Users")+"\n")
 	for _, uName := range a.Auth.ListUsers() {
 		fmt.Fprintf(w, "- %s\n", uName)
