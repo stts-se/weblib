@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sort"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -57,4 +58,23 @@ func simpleDoc(router *mux.Router, docInfo map[string]string) http.HandlerFunc {
 		url := strings.Join(walkedURLs, "\n")
 		fmt.Fprintf(w, "%s\n", url)
 	}
+}
+
+func sortedKeys(m map[string]string) []string {
+	res := []string{}
+	for k := range m {
+		res = append(res, k)
+	}
+
+	sort.Slice(res, func(i, j int) bool { return res[i] < res[j] })
+	return res
+}
+
+func about(w http.ResponseWriter, r *http.Request) {
+	lines := []string{}
+	for _, key := range sortedKeys(appInfo) {
+		lines = append(lines, fmt.Sprintf("<tr><td>%s:</td><td>%s</td></tr>", key, appInfo[key]))
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	fmt.Fprintf(w, "<table>%s</table>\n", strings.Join(lines, "\n"))
 }

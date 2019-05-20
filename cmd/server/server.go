@@ -35,6 +35,12 @@ func (s *Server) close() error {
 	return nil
 }
 
+var appInfo = map[string]string{
+	"AppName":         "demo server",
+	"Version":         "0.1",
+	"Build timestamp": "unknown",
+}
+
 func main() {
 
 	rand.Seed(time.Now().UnixNano())
@@ -118,6 +124,7 @@ func main() {
 
 	r.HandleFunc("/", authHandlers.helloWorld)
 	r.HandleFunc("/doc/", simpleDoc(r, make(map[string]string)))
+	r.HandleFunc("/about/", about)
 
 	authR := r.PathPrefix("/auth").Subrouter()
 	authR.HandleFunc("/", authHandlers.message("User authorization"))
@@ -133,7 +140,7 @@ func main() {
 	auth.RequireAuthRole(adminR, "admin")
 	adminR.HandleFunc("/", authHandlers.message("Admin area (open for admin users)"))
 	adminR.HandleFunc("/invite", authHandlers.invite)
-	protectedR.HandleFunc("/list_users", authHandlers.listUsers)
+	adminR.HandleFunc("/list_users", authHandlers.listUsers)
 
 	r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("static/"))))
 
