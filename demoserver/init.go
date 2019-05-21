@@ -49,6 +49,7 @@ func initUserDB(dbFile string) (*userdb.UserDB, error) {
 	if err != nil {
 		return userDB, fmt.Errorf("couldn't save user db : %v", err)
 	}
+	log.Printf("Loaded user database from file %s", dbFile)
 	return userDB, nil
 }
 
@@ -74,6 +75,7 @@ func initRoleDB(dbFile string) (*userdb.RoleDB, error) {
 	if err != nil {
 		return roleDB, fmt.Errorf("couldn't save role db : %v", err)
 	}
+	log.Printf("Loaded role database from file %s", dbFile)
 	return roleDB, nil
 }
 

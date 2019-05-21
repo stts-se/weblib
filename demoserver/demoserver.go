@@ -36,23 +36,28 @@ func (s *Server) close() error {
 	return nil
 }
 
-var appInfo = map[string]string{
-	"AppName":         "demo server",
-	"Version":         "0.1",
-	"Build timestamp": "unknown",
+type pair struct {
+	v1 string
+	v2 interface{}
+}
+
+var appInfo = []pair{
+	pair{"App name", "demoserver"},
+	pair{"Version", "0.1"},
+	pair{"Release date", "unknown"},
+	pair{"Build timestamp", time.Now().Format("2006-01-02 15:04:05 MST")},
 }
 
 const i18nDir = "i18n"
+const cmdName = "demoserver"
 
 func main() {
-
-	cmdName := "demoserver"
 
 	rand.Seed(time.Now().UnixNano())
 
 	var err error
 
-	// OPTIONS
+	// FLAGS
 	host := flag.String("host", "127.0.0.1", "server host")
 	port := flag.Int("port", 7932, "server port")
 	serverKeyFile := flag.String("key", "server_config/serverkey", "server key file for session cookies")
@@ -64,30 +69,34 @@ func main() {
 	tlsCert := flag.String("tlsCert", "", "server_config/cert.pem (generate with golang's crypto/tls/generate_cert.go) (default disabled)")
 	tlsKey := flag.String("tlsKey", "", "server_config/key.pem (generate with golang's crypto/tls/generate_cert.go) (default disabled)")
 
-	// cache used flags flags
-	required := map[string]string{"u": "user database", "r": "role database"}
 	flag.Parse()
-	seen := make(map[string]bool)
-	flag.Visit(func(f *flag.Flag) { seen[f.Name] = true })
-
+	args := flag.Args()
 	if *help {
 		fmt.Fprintf(os.Stderr, "Usage: %s <options>\n", cmdName)
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
 
+	requiredFlags := map[string]string{"u": "user database", "r": "role database"}
+	// cache what flags have been used
+	usedFlags := make(map[string]bool)
+	flag.Visit(func(f *flag.Flag) { usedFlags[f.Name] = true })
+
 	// check for missing, required flags
-	for req, desc := range required {
-		if !seen[req] {
-			// or possibly use `log.Fatalf` instead of:
+	missingRequiredFlags := false
+	for req, desc := range requiredFlags {
+		if !usedFlags[req] {
 			fmt.Fprintf(os.Stderr, "missing required flag -%s %s\n", req, desc)
-			fmt.Fprintf(os.Stderr, "Usage: %s <options>\n", cmdName)
-			flag.PrintDefaults()
-			os.Exit(2) // the same exit code flag.Parse uses
+			missingRequiredFlags = true
 		}
 	}
+	if missingRequiredFlags {
+		fmt.Fprintf(os.Stderr, "Usage: %s <options>\n", cmdName)
+		flag.PrintDefaults()
+		os.Exit(2) // the same exit code flag.Parse uses
+	}
 
-	args := flag.Args()
+	// check remaining args (should be empty)
 	if len(args) != 0 {
 		fmt.Fprintf(os.Stderr, "Usage: %s <options>\n", cmdName)
 		flag.PrintDefaults()

@@ -75,8 +75,8 @@ func sortedKeys(m map[string]string) []string {
 
 func about(w http.ResponseWriter, r *http.Request) {
 	lines := []string{}
-	for _, key := range sortedKeys(appInfo) {
-		lines = append(lines, fmt.Sprintf("<tr><td>%s:</td><td>%s</td></tr>", key, appInfo[key]))
+	for _, pair := range appInfo {
+		lines = append(lines, fmt.Sprintf("<tr><td>%s:</td><td>%v</td></tr>", pair.v1, pair.v2))
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	fmt.Fprintf(w, "<table>%s</table>\n", strings.Join(lines, "\n"))
