@@ -160,7 +160,7 @@ var StripLocaleRegion = true
 // LogToTemplate : if set to true, all calls to I18N.S will be logged and saved to a template file (template.properties)
 var LogToTemplate = true
 
-// GetLocaleFromRequest retrieves locale name and source from http.Request (reads (1) URL params, (2) cookies, (3) request header). The first return value is the locale name, the second value is the source from which the locale was retrieved.
+// GetLocaleFromRequest retrieves the requested locale from the http.Request. The first return value is the locale name, the second value is the source from which the locale was retrieved (param, cookie or header).
 func GetLocaleFromRequest(r *http.Request) (string, string) {
 	// check params
 	locName := util.GetParam(r, "locale")
@@ -195,8 +195,9 @@ func GetI18NFromRequest(r *http.Request) *I18N {
 	return Default()
 }
 
-// Close i18n nicely. If LogToTemplate is enabled, a template file (template.properties) will be created.
-// TODO: In the future, maybe also write cached translations to file (and append undefined translations to existing i18n files).
+/* Close i18n nicely. If LogToTemplate is enabled, a template file (template.properties) will be created.
+TODO: In the future, maybe also write cached translations to file (and append undefined translations to existing i18n files).
+*/
 func Close() error {
 	if LogToTemplate {
 		templateLog.mutex.Lock()
