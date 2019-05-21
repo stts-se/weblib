@@ -17,17 +17,22 @@ func Test_I18N(t *testing.T) {
 		t.Errorf(fs, exp, got)
 	}
 
-	// if exp, got := "Inloggad som användare hanna", i18n.S("Logged in as user %s", "hanna"); exp != got {
-	// 	t.Errorf(fs, exp, got)
-	// }
+	if exp, got := "Inloggad som användare hanna", i18n.S("Logged in as user %s", "hanna"); exp != got {
+		t.Errorf(fs, exp, got)
+	}
 
-	// if exp, got := "Inloggad som användare hanna, roll admin", i18n.S("Logged in as user %s, role %s", "hanna", "admin"); exp != got {
-	// 	t.Errorf(fs, exp, got)
-	// }
+	if exp, got := "Inloggad som användare hanna, roll admin", i18n.S("Logged in as user %s, role %s", "hanna", "admin"); exp != got {
+		t.Errorf(fs, exp, got)
+	}
 
-	// hannaAdminSlice := []string{"hanna", "admin"}
-	// if exp, got := "Inloggad som användare hanna, roll admin", i18n.S("Logged in as user %s, role %s", hannaAdminSlice...); exp != got {
-	// 	t.Errorf(fs, exp, got)
-	// }
+	inputSlice1 := []interface{}{"hanna", "admin"}
+	if exp, got := "Inloggad som användare hanna, roll admin", i18n.S("Logged in as user %s, role %s", inputSlice1...); exp != got {
+		t.Errorf(fs, exp, got)
+	}
+
+	inputSlice2 := []string{"hanna", "admin"}
+	if exp, got := "Inloggad som användare hanna, roll admin", i18n.S("Logged in as user %s, role %s", inputSlice2); exp != got {
+		t.Errorf(fs, exp, got)
+	}
 
 }

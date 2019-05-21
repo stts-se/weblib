@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"path"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -21,7 +22,8 @@ import (
 type I18N map[string]string
 
 // S is used to look up the localized version of the input string (s). It will also fill in the arguments (args) using fmt.Sprintf.
-func (i *I18N) S(s string, args ...string) string {
+func (i *I18N) S(s string, args ...interface{}) string {
+	//log.Printf("I18N.S debug\t%s\t%#v\t%v\t%s", s, args, len(args), reflect.TypeOf(args))
 	res := s
 	if r, ok := (*i)[s]; ok {
 		res = r
@@ -29,7 +31,18 @@ func (i *I18N) S(s string, args ...string) string {
 	if len(args) == 0 {
 		return res
 	}
-	return fmt.Sprintf(res, args)
+
+	// flatten incorrectly organized strings
+	// interface{} slice with a single []string slice element should probably flattened
+	if len(args) == 1 && reflect.TypeOf(args[0]) == reflect.TypeOf([]string{}) {
+		argsI := []interface{}{}
+		for _, s := range args[0].([]string) {
+			argsI = append(argsI, s)
+		}
+		args = argsI
+	}
+
+	return fmt.Sprintf(res, args...)
 }
 
 type i18nDB struct {

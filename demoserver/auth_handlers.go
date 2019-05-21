@@ -60,7 +60,7 @@ func (a *authHandlers) login(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		log.Printf("User %s logged in", userName)
-		fmt.Fprintf(w, cli18n.S("Logged in as user %s", userName))
+		fmt.Fprintf(w, cli18n.S("Logged in as user %s", userName)+"\n")
 		return
 
 	default:
@@ -137,7 +137,7 @@ func (a *authHandlers) signup(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		log.Printf("Created used %s", userName)
-		fmt.Fprintf(w, cli18n.S("Created user %s", userName))
+		fmt.Fprintf(w, cli18n.S("Created user %s", userName)+"\n")
 		return
 
 	default:
@@ -164,7 +164,7 @@ func (a *authHandlers) logout(w http.ResponseWriter, r *http.Request) {
 		}
 
 		log.Printf("User %s logged out", userName)
-		fmt.Fprintf(w, cli18n.S("Logged out user %s", userName))
+		fmt.Fprintf(w, cli18n.S("Logged out user %s", userName)+"\n")
 	default:
 		http.NotFound(w, r)
 	}

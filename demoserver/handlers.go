@@ -108,19 +108,23 @@ func translate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Missing param input", http.StatusPartialContent)
 		return
 	}
-	argsS, err := url.PathUnescape(util.GetParam(r, "args"))
+	argsParam, err := url.PathUnescape(util.GetParam(r, "args"))
 	if err != nil {
 		log.Printf("Couldn't unescape param args : %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	args := strings.Split(argsS, ",")
-	if argsS == "" {
-		args = []string{}
+	var translated string
+	if argsParam == "" {
+		translated = cli18n.S(input)
+	} else {
+		// args := []interface{}{}
+		// for _, s := range strings.Split(argsParam, ",") {
+		// 	args = append(args, s)
+		// }
+		args := strings.Split(argsParam, ",")
+		translated = cli18n.S(input, args)
 	}
-	log.Printf("Input: %s", input)
-	log.Printf("Args: %#v", args)
-	translated := cli18n.S(input, args...)
-	fmt.Fprintf(w, translated)
+	fmt.Fprintf(w, strings.TrimSpace(translated)+"\n")
 
 }
