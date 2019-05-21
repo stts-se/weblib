@@ -34,7 +34,7 @@ func (sit *singleUseTokens) purge() {
 	log.Printf("Purged single use tokens db")
 }
 
-// Auth : authentication management, using a user database along with sessions and cookies
+// Auth struct for authentication management, using a user database along with sessions and cookies
 type Auth struct {
 	sessionName     string
 	userDB          *userdb.UserDB
@@ -63,7 +63,7 @@ func NewAuth(sessionName string, userDB *userdb.UserDB, roleDB *userdb.RoleDB, c
 	return res, nil
 }
 
-// Login : log in a user with the specified username and password, creating a new auth session for the user
+// Login user with the specified username and password, creating a new auth session for the user
 func (a *Auth) Login(w http.ResponseWriter, r *http.Request, userName, password string) error {
 
 	ok, err := a.userDB.Authorized(userName, password)
@@ -141,7 +141,7 @@ func (a *Auth) SignupUser(userName, password, singleUseToken string) error {
 	return nil
 }
 
-// Logout : logout current user
+// Logout current user. Returns the logged out username, and an error, if any.
 func (a *Auth) Logout(w http.ResponseWriter, r *http.Request) (string, error) {
 	session, err := a.cookieStore.Get(r, a.sessionName)
 	if err != nil {
@@ -156,7 +156,7 @@ func (a *Auth) Logout(w http.ResponseWriter, r *http.Request) (string, error) {
 	return userName, nil
 }
 
-// IsLoggedIn : Check if there the user is logged in. Second return value is the user name.
+// IsLoggedIn returns true if a user is logged in. Second return value is the user name.
 func (a *Auth) IsLoggedIn(r *http.Request) (bool, string) {
 	session, err := a.cookieStore.Get(r, a.sessionName)
 	if err != nil {
@@ -168,7 +168,7 @@ func (a *Auth) IsLoggedIn(r *http.Request) (bool, string) {
 	return false, ""
 }
 
-// IsLoggedInWithRole : check if a user is logged in with the specified role.  Second return value is the user name.
+// IsLoggedInWithRole returns true if a used is logged in with the specified role.  Second return value is the user name.
 func (a *Auth) IsLoggedInWithRole(r *http.Request, roleName string) (bool, string) {
 	if ok, authUser := a.IsLoggedIn(r); ok && authUser != "" {
 		if a.roleDB.Authorized(roleName, authUser) {
@@ -236,12 +236,12 @@ func (a *Auth) ListUsers() []string {
 	return a.userDB.GetUsers()
 }
 
-// SaveUserDB : save user database to disk
+// SaveUserDB save user database to disk
 func (a *Auth) SaveUserDB() error {
 	return a.userDB.SaveFile()
 }
 
-// SaveRoleDB : save role database to disk
+// SaveRoleDB save role database to disk
 func (a *Auth) SaveRoleDB() error {
 	return a.roleDB.SaveFile()
 }

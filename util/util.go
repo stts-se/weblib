@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"compress/gzip"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -22,13 +21,12 @@ func GetParam(r *http.Request, paramName string) string {
 	return vars[paramName]
 }
 
-// ParseForm : parse request form, and add required params to a key-value map
-func ParseForm(r *http.Request, requiredParams []string) (map[string]string, bool) {
+// ParseForm is used to parse a request form, and insert required params to a key-value map. An error is returned if the call to r.ParseForms generates an error, or if any of the required parameters are unset.
+func ParseForm(r *http.Request, requiredParams []string) (map[string]string, error) {
 	res := make(map[string]string)
 	missing := []string{}
 	if err := r.ParseForm(); err != nil {
-		log.Printf("Couldn't parse form : %v", err)
-		return res, false
+		return res, fmt.Errorf("couldn't parse form : %v", err)
 	}
 	for _, param := range requiredParams {
 		value := r.FormValue(param)
@@ -43,9 +41,9 @@ func ParseForm(r *http.Request, requiredParams []string) (map[string]string, boo
 		if len(missing) == 1 {
 			pluralS = ""
 		}
-		log.Printf("Couldn't parse form : missing param%s : %v", pluralS, missing)
+		return res, fmt.Errorf("missing param%s : %v", pluralS, missing)
 	}
-	return res, true
+	return res, nil
 }
 
 func getProtocol(r *http.Request) string {

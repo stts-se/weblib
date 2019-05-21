@@ -154,11 +154,11 @@ func ReadI18NPropFiles(dir string) error {
 	return nil
 }
 
-// StripLocaleRegion : if set to true, everything after the first dash (-) will be ignored in the specified locale
+// StripLocaleRegion set to true will ignore everything after the first dash (-) of a locale string
 var StripLocaleRegion = true
 
-// LogToTemplate : if set to true, all calls to I18N.S will be logged and saved to a template file (template.properties)
-var LogToTemplate = true
+// LogToTemplate  set to true to log all calls to I18N.S to a template file (template.properties)
+var LogToTemplate = false
 
 // GetLocaleFromRequest retrieves the requested locale from the http.Request. The first return value is the locale name, the second value is the source from which the locale was retrieved (param, cookie or header).
 func GetLocaleFromRequest(r *http.Request) (string, string) {

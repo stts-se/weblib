@@ -49,14 +49,15 @@ func (a *authHandlers) login(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	case "POST":
-		form, ok := util.ParseForm(r, []string{"username", "password"})
-		userName := form["username"]
-		password := form["password"]
-		if !ok {
+		form, err := util.ParseForm(r, []string{"username", "password"})
+		if err != nil {
+			log.Printf("Couldn't parse form : %v", err)
 			http.Error(w, "Incomplete credentials", http.StatusUnauthorized)
 		}
+		userName := form["username"]
+		password := form["password"]
 
-		err := a.Auth.Login(w, r, userName, password)
+		err = a.Auth.Login(w, r, userName, password)
 		if err != nil {
 			log.Printf("Login failed : %v", err)
 			http.Error(w, "Login failed", http.StatusUnauthorized)
@@ -125,15 +126,16 @@ func (a *authHandlers) signup(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	case "POST":
-		form, ok := util.ParseForm(r, []string{"username", "password", "token"})
+		form, err := util.ParseForm(r, []string{"username", "password", "token"})
+		if err != nil {
+			log.Printf("Couldn't parse form : %v", err)
+			http.Error(w, "Incomplete credentials", http.StatusUnauthorized)
+		}
 		userName := form["username"]
 		password := form["password"]
 		token := form["token"]
-		if !ok {
-			http.Error(w, "Incomplete credentials", http.StatusUnauthorized)
-		}
 
-		err := a.Auth.SignupUser(userName, password, token)
+		err = a.Auth.SignupUser(userName, password, token)
 		if err != nil {
 			log.Printf("Couldn't create user : %s", err)
 			http.Error(w, "Internal server error", http.StatusUnauthorized)
