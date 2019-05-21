@@ -22,7 +22,7 @@ type singleUseTokens struct {
 	maxAge float64 // max age in seconds
 }
 
-// NB! not thread safe -- lock mutex before calling
+// NB! not thread safe -- mutex should be locked before calling
 func (sit *singleUseTokens) purge() {
 	for token, created := range sit.tokens {
 		if time.Since(created).Seconds() > sit.maxAge {
