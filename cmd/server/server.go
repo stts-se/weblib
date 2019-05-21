@@ -173,7 +173,8 @@ func main() {
 
 	stop := make(chan os.Signal, 1)
 
-	signal.Notify(stop, os.Interrupt)
+	//signal.Notify(stop, os.Interrupt)
+	signal.Notify(stop) // will exit nicely on Ctrl-C and kill signals
 	go func() {
 		if tlsEnabled {
 			err = httpSrv.ListenAndServeTLS(*tlsCert, *tlsKey)
@@ -188,8 +189,10 @@ func main() {
 
 	<-stop
 
-	// This happens after Ctrl-C
+	// This happens after Ctrl-C/kill signals
 	fmt.Fprintf(os.Stderr, "\n")
+	log.Printf("Received stop signal")
+
 	err = srv.close()
 	if err != nil {
 		log.Fatalf("Server stopped with an error on close : %v", err)
