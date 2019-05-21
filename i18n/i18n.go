@@ -20,16 +20,16 @@ import (
 // I18N a key-value dictionary container for a certain locale
 type I18N map[string]string
 
-// S is used to look up the localized version of the param. It will also fill in the values using fmt.Sprintf.
-func (i *I18N) S(param string, values ...string) string {
-	res := param
-	if r, ok := (*i)[param]; ok {
+// S is used to look up the localized version of the input string (`s'). It will also fill in the arguments (`args`) using fmt.Sprintf.
+func (i *I18N) S(s string, args ...interface{}) string {
+	res := s
+	if r, ok := (*i)[s]; ok {
 		res = r
 	}
-	if len(values) == 0 {
+	if len(args) == 0 {
 		return res
 	}
-	return fmt.Sprintf(res, values)
+	return fmt.Sprintf(res, args)
 }
 
 type i18nDB struct {
