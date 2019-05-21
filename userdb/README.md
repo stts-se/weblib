@@ -4,10 +4,12 @@ Libraries for user and role management.
 
 A simple user database, saved on disk as a text file.
 
-File format:
+Tab-separated file format
 
- 1. username &lt;TAB&gt; argon2 hashed password
- 2. DELETE &lt;TAB&gt; username
+|Field 1|Field 2|Description|
+|-|-|-|
+|username|argon2 hashed password||
+|DELETE|username|Temporary, database internal instructions|
 
 Sample file:
 
@@ -21,9 +23,11 @@ A simple database of roles/permissions, saved on disk as a text file.
 
 File format:
 
- 1. rolename &lt;TAB&gt; users (comma-separated)
- 2. DELETE &lt;TAb&gt; rolename
- 
+|Field 1|Field 2|Description|
+|-|-|-|
+|role name|users (comma-separated)||
+|DELETE|role name|Temporary, database internal instructions|
+
  Sample file:
  
     member	angela james
