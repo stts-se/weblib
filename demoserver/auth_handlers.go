@@ -17,7 +17,7 @@ type authHandlers struct {
 }
 
 func (a *authHandlers) helloWorld(w http.ResponseWriter, r *http.Request) {
-	cli18n := i18n.GetLocaleFromRequest(r)
+	cli18n := i18n.GetI18NFromRequest(r)
 	var msg string
 	if ok, userName := a.Auth.IsLoggedIn(r); ok {
 		msg = fmt.Sprintf(cli18n.S("Hello, you are logged in as user %s!", userName))
@@ -29,7 +29,7 @@ func (a *authHandlers) helloWorld(w http.ResponseWriter, r *http.Request) {
 
 func (a *authHandlers) message(msg string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		cli18n := i18n.GetLocaleFromRequest(r)
+		cli18n := i18n.GetI18NFromRequest(r)
 		msgLoc := cli18n.S(msg)
 		if ok, uName := a.Auth.IsLoggedIn(r); ok {
 			msgLoc = strings.Replace(msgLoc, "${username}", uName, -1)
@@ -39,7 +39,7 @@ func (a *authHandlers) message(msg string) http.HandlerFunc {
 }
 
 func (a *authHandlers) login(w http.ResponseWriter, r *http.Request) {
-	cli18n := i18n.GetLocaleFromRequest(r)
+	cli18n := i18n.GetI18NFromRequest(r)
 	switch r.Method {
 	case "GET":
 		err := templates.ExecuteTemplate(w, "login.html", TemplateData{Loc: cli18n})
@@ -72,7 +72,7 @@ func (a *authHandlers) login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *authHandlers) invite(w http.ResponseWriter, r *http.Request) {
-	cli18n := i18n.GetLocaleFromRequest(r)
+	cli18n := i18n.GetI18NFromRequest(r)
 	switch r.Method {
 	case "GET":
 		err := templates.ExecuteTemplate(w, "invite.html", TemplateData{Loc: cli18n})
@@ -99,7 +99,7 @@ func (a *authHandlers) invite(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *authHandlers) signup(w http.ResponseWriter, r *http.Request) {
-	cli18n := i18n.GetLocaleFromRequest(r)
+	cli18n := i18n.GetI18NFromRequest(r)
 	switch r.Method {
 	case "GET":
 		token, err := url.PathUnescape(util.GetParam(r, "token"))
@@ -149,7 +149,7 @@ func (a *authHandlers) signup(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *authHandlers) logout(w http.ResponseWriter, r *http.Request) {
-	cli18n := i18n.GetLocaleFromRequest(r)
+	cli18n := i18n.GetI18NFromRequest(r)
 	switch r.Method {
 	case "GET":
 		err := templates.ExecuteTemplate(w, "logout.html", TemplateData{Loc: cli18n})
@@ -174,7 +174,7 @@ func (a *authHandlers) logout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *authHandlers) listUsers(w http.ResponseWriter, r *http.Request) {
-	cli18n := i18n.GetLocaleFromRequest(r)
+	cli18n := i18n.GetI18NFromRequest(r)
 	fmt.Fprintf(w, cli18n.S("Users")+"\n")
 	for _, uName := range a.Auth.ListUsers() {
 		fmt.Fprintf(w, "- %s\n", uName)

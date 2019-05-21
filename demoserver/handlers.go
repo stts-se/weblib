@@ -16,7 +16,7 @@ import (
 
 func message(msg string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		cli18n := i18n.GetLocaleFromRequest(r)
+		cli18n := i18n.GetI18NFromRequest(r)
 		fmt.Fprintf(w, cli18n.S("%s")+"\n", msg)
 	}
 }
@@ -31,6 +31,8 @@ func logging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Request: %#v", r)
 		log.Printf("Request URL: %s", util.GetRequestURL(r))
+		loc, locSource := i18n.GetLocaleFromRequest(r)
+		log.Printf("Requested locale: %s (from %s)", loc, locSource)
 		next.ServeHTTP(w, r)
 	})
 }
@@ -83,7 +85,7 @@ func about(w http.ResponseWriter, r *http.Request) {
 }
 
 func listLocales(w http.ResponseWriter, r *http.Request) {
-	cli18n := i18n.GetLocaleFromRequest(r)
+	cli18n := i18n.GetI18NFromRequest(r)
 	fmt.Fprintf(w, cli18n.S("Locales")+"\n")
 	for _, loc := range i18n.ListLocales() {
 		if loc == i18n.DefaultLocale {
@@ -95,7 +97,7 @@ func listLocales(w http.ResponseWriter, r *http.Request) {
 }
 
 func translate(w http.ResponseWriter, r *http.Request) {
-	cli18n := i18n.GetLocaleFromRequest(r)
+	cli18n := i18n.GetI18NFromRequest(r)
 	//input, err := url.PathUnescape(util.GetParam(r, "input"))
 	// if err != nil {
 	// 	log.Printf("Couldn't unescape param input : %v", err)

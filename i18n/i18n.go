@@ -23,8 +23,6 @@ type I18N map[string]string
 
 // S is used to look up the localized version of the input string (s). It will also fill in the arguments (args) using fmt.Sprintf.
 func (i *I18N) S(s string, args ...interface{}) string {
-	log.Printf("I18N.S debug\t%s\t%#v\t%v\t%s", s, args, len(args), reflect.TypeOf(args))
-
 	if LogToTemplate {
 		templateLog.mutex.Lock()
 		defer templateLog.mutex.Unlock()
@@ -104,7 +102,7 @@ func GetOrDefault(locale string) *I18N {
 	if loc, ok := i18ns.data[locale]; ok {
 		return loc
 	}
-	log.Printf("No i18n for locale %s, using default locale %s", locale, DefaultLocale)
+	log.Printf("No i18n defined for locale %s, using default locale %s", locale, DefaultLocale)
 	return Default()
 }
 
@@ -162,23 +160,32 @@ var StripLocaleRegion = true
 // LogToTemplate : if set to true, all calls to I18N.S will be logged and saved to a template file (template.properties)
 var LogToTemplate = true
 
-// GetLocaleFromRequest retrieve locale from http.Request (reads (1) URL params, (2) cookies, (3) request header)
-func GetLocaleFromRequest(r *http.Request) *I18N {
+// GetLocaleFromRequest retrieves locale name and source from http.Request (reads (1) URL params, (2) cookies, (3) request header). The first return value is the locale name, the second value is the source from which the locale was retrieved.
+func GetLocaleFromRequest(r *http.Request) (string, string) {
+	// check params
 	locName := util.GetParam(r, "locale")
-	if locName == "" {
-		cookie, err := r.Cookie("locale")
-		log.Printf("Locale cookie from request: %#v", cookie)
-		if err == nil {
-			locName = cookie.Value
-		}
+	if locName != "" {
+		return locName, "param"
 	}
-	if locName == "" {
-		acceptLangs := r.Header["Accept-Language"]
-		if len(acceptLangs) > 0 {
-			locName = strings.Split(acceptLangs[0], ",")[0]
-		}
+
+	// check cookies
+	cookie, err := r.Cookie("locale")
+	//log.Printf("Locale cookie from request: %#v", cookie)
+	if err == nil {
+		return cookie.Value, "cookie"
 	}
-	log.Printf("Requested locale: %s", locName)
+
+	// check header Accept-Language
+	acceptLangs := r.Header["Accept-Language"]
+	if len(acceptLangs) > 0 {
+		return strings.Split(acceptLangs[0], ",")[0], "header"
+	}
+	return "", ""
+}
+
+// GetI18NFromRequest will lookup the requested locale in the cache, and return the corresponding I18N instance. If the requested locale doesn't exist, the default locale will be returned instead.
+func GetI18NFromRequest(r *http.Request) *I18N {
+	locName, _ := GetLocaleFromRequest(r)
 	if locName != "" {
 		if StripLocaleRegion {
 			locName = strings.Split(locName, "-")[0]
