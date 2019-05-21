@@ -1,3 +1,4 @@
+// Package auth is a library for user authentication over http.
 package auth
 
 import (
