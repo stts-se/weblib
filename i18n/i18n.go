@@ -21,7 +21,7 @@ import (
 type I18N map[string]string
 
 // S is used to look up the localized version of the input string (s). It will also fill in the arguments (args) using fmt.Sprintf.
-func (i *I18N) S(s string, args ...interface{}) string {
+func (i *I18N) S(s string, args ...string) string {
 	res := s
 	if r, ok := (*i)[s]; ok {
 		res = r
