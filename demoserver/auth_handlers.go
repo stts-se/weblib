@@ -17,21 +17,24 @@ type authHandlers struct {
 }
 
 func (a *authHandlers) helloWorld(w http.ResponseWriter, r *http.Request) {
+	cli18n := i18n.GetLocaleFromRequest(r)
 	var msg string
 	if ok, userName := a.Auth.IsLoggedIn(r); ok {
-		msg = fmt.Sprintf("Hello, you are logged in as user %s!", userName)
+		msg = fmt.Sprintf(cli18n.S("Hello, you are logged in as user %s!", userName))
 	} else {
-		msg = "Hello, you are not logged in."
+		msg = cli18n.S("Hello, you are not logged in.")
 	}
 	fmt.Fprintf(w, "%s\n", msg)
 }
 
 func (a *authHandlers) message(msg string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		cli18n := i18n.GetLocaleFromRequest(r)
+		msgLoc := cli18n.S(msg)
 		if ok, uName := a.Auth.IsLoggedIn(r); ok {
-			msg = strings.Replace(msg, "${username}", uName, -1)
+			msgLoc = strings.Replace(msgLoc, "${username}", uName, -1)
 		}
-		fmt.Fprintf(w, "%s\n", msg)
+		fmt.Fprintf(w, "%s\n", msgLoc)
 	}
 }
 

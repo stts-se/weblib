@@ -23,7 +23,7 @@ type I18N map[string]string
 
 // S is used to look up the localized version of the input string (s). It will also fill in the arguments (args) using fmt.Sprintf.
 func (i *I18N) S(s string, args ...interface{}) string {
-	//log.Printf("I18N.S debug\t%s\t%#v\t%v\t%s", s, args, len(args), reflect.TypeOf(args))
+	log.Printf("I18N.S debug\t%s\t%#v\t%v\t%s", s, args, len(args), reflect.TypeOf(args))
 
 	if LogToTemplate {
 		templateLog.mutex.Lock()
