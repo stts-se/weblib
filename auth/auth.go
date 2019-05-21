@@ -241,6 +241,11 @@ func (a *Auth) SaveUserDB() error {
 	return a.userDB.SaveFile()
 }
 
+// SaveRoleDB : save role database to disk
+func (a *Auth) SaveRoleDB() error {
+	return a.roleDB.SaveFile()
+}
+
 // UTILITY FUNCTIONS
 func genRandomString(length int) string {
 	chars := []rune("ABCDEFGHJKLMNPQRSTUVWXYZ" + "abcdefghijkmnopqrstuvwxyz" + "123456789_")

@@ -29,9 +29,18 @@ func (s *Server) url() string {
 }
 
 func (s *Server) close() error {
-	err := s.auth.SaveUserDB()
+	var err error
+	err = s.auth.SaveUserDB()
 	if err != nil {
 		return fmt.Errorf("couldn't save user db : %v", err)
+	}
+	err = s.auth.SaveRoleDB()
+	if err != nil {
+		return fmt.Errorf("couldn't save user db : %v", err)
+	}
+	err = i18n.Close()
+	if err != nil {
+		log.Printf("Couldn't close i18mm : %v", err)
 	}
 	return nil
 }
@@ -63,6 +72,7 @@ func main() {
 	serverKeyFile := flag.String("key", "server_config/serverkey", "server key file for session cookies")
 	userDBFile := flag.String("u", "", "user database (required)")
 	roleDBFile := flag.String("r", "", "role database (required)")
+	logI18NToTemplate := flag.Bool("t", false, "generate a template from all strings processed by i18n (template file is generated on server shutdown)")
 	help := flag.Bool("h", false, "print usage and exit")
 
 	// go run /usr/local/go/src/crypto/tls/generate_cert.go
@@ -103,6 +113,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	i18n.LogToTemplate = *logI18NToTemplate
 	err = i18n.ReadI18NPropFiles(i18nDir)
 	if err != nil {
 		log.Fatalf("Couldn't read i18n properties : %v", err)

@@ -6,12 +6,14 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"path"
 	"path/filepath"
 	"reflect"
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/stts-se/weblib/util"
 )
@@ -22,6 +24,13 @@ type I18N map[string]string
 // S is used to look up the localized version of the input string (s). It will also fill in the arguments (args) using fmt.Sprintf.
 func (i *I18N) S(s string, args ...interface{}) string {
 	//log.Printf("I18N.S debug\t%s\t%#v\t%v\t%s", s, args, len(args), reflect.TypeOf(args))
+
+	if LogToTemplate {
+		templateLog.mutex.Lock()
+		defer templateLog.mutex.Unlock()
+		templateLog.data[s] = true
+	}
+
 	res := s
 	if r, ok := (*i)[s]; ok {
 		res = r
@@ -51,6 +60,18 @@ type i18nDB struct {
 var i18ns = i18nDB{
 	mutex: &sync.RWMutex{},
 	data:  make(map[string]*I18N),
+}
+
+var i18nDir = ""
+
+type templateLogger struct {
+	mutex *sync.RWMutex
+	data  map[string]bool
+}
+
+var templateLog = templateLogger{
+	mutex: &sync.RWMutex{},
+	data:  make(map[string]bool),
 }
 
 // DefaultLocale holds the name of the default locale (used when no locale is provided by the user/client)
@@ -91,6 +112,10 @@ func GetOrDefault(locale string) *I18N {
 func ReadI18NPropFiles(dir string) error {
 	res := make(map[string]*I18N)
 
+	if i18nDir == "" {
+		i18nDir = dir
+	}
+
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
 		return fmt.Errorf("Couldn't list files in folder %s : %v", dir, err)
@@ -110,6 +135,9 @@ func ReadI18NPropFiles(dir string) error {
 		}
 
 		for _, l := range lines {
+			if strings.HasPrefix(strings.TrimSpace(l), "#") {
+				continue
+			}
 			fs := strings.Split(l, "\t")
 			if len(fs) == 2 {
 				loc[fs[0]] = fs[1]
@@ -128,7 +156,11 @@ func ReadI18NPropFiles(dir string) error {
 	return nil
 }
 
-const stripLocaleRegion = true
+// StripLocaleRegion : if set to true, everything after the first dash (-) will be ignored in the specified locale
+var StripLocaleRegion = true
+
+// LogToTemplate : if set to true, all calls to I18N.S will be logged and saved to a template file (template.properties)
+var LogToTemplate = true
 
 // GetLocaleFromRequest retrieve locale from http.Request (reads (1) URL params, (2) cookies, (3) request header)
 func GetLocaleFromRequest(r *http.Request) *I18N {
@@ -148,10 +180,49 @@ func GetLocaleFromRequest(r *http.Request) *I18N {
 	}
 	log.Printf("Requested locale: %s", locName)
 	if locName != "" {
-		if stripLocaleRegion {
+		if StripLocaleRegion {
 			locName = strings.Split(locName, "-")[0]
 		}
 		return GetOrDefault(locName)
 	}
 	return Default()
+}
+
+func Close() error {
+	if LogToTemplate {
+		templateLog.mutex.Lock()
+		defer templateLog.mutex.Unlock()
+
+		if len(templateLog.data) == 0 {
+			return nil
+		}
+
+		if i18nDir == "" {
+			return fmt.Errorf("i18n is not initialised properly (no output dir)")
+		}
+		templateFileName := path.Join(i18nDir, fmt.Sprintf("template%s", i18nExtension))
+
+		fh, err := os.Create(templateFileName)
+		if err != nil {
+			return fmt.Errorf("failed to open file : %v", err)
+		}
+		defer fh.Close()
+
+		var sortedKeys = func(m map[string]bool) []string {
+			res := []string{}
+			for k := range m {
+				res = append(res, k)
+			}
+
+			sort.Slice(res, func(i, j int) bool { return res[i] < res[j] })
+			return res
+		}
+
+		fmt.Fprintf(fh, "# i18n template generated on %v\n", time.Now().Format("2006-01-02 15:04:05 MST"))
+		for _, s := range sortedKeys(templateLog.data) {
+			fmt.Fprintf(fh, "%s\n", s)
+		}
+		log.Printf("Saved i18n template to file %s", templateFileName)
+	}
+	return nil
 }
