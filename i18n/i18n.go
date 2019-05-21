@@ -116,7 +116,7 @@ func ReadI18NPropFiles(dir string) error {
 			}
 		}
 		res[locName] = &loc
-		log.Printf("Read locale %s from file %s", locName, fPath)
+		log.Printf("Read locale %s from %s", locName, fPath)
 	}
 	if _, ok := res[DefaultLocale]; !ok {
 		loc := I18N(make(map[string]string))

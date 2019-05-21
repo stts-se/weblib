@@ -14,14 +14,8 @@ import (
 	"github.com/gorilla/sessions"
 
 	"github.com/stts-se/weblib/userdb"
+	"github.com/stts-se/weblib/util"
 )
-
-func fileExists(fileName string) bool {
-	if _, err := os.Stat(fileName); os.IsNotExist(err) {
-		return false
-	}
-	return true
-}
 
 func initUserDB(dbFile string) (*userdb.UserDB, error) {
 	var constraints = func(userName, password string) (bool, string) {
@@ -40,6 +34,11 @@ func initUserDB(dbFile string) (*userdb.UserDB, error) {
 		return true, ""
 	}
 
+	loadedOrCreated := "Loaded"
+	if !util.FileExists(dbFile) {
+		loadedOrCreated = "Created"
+	}
+
 	userDB, err := userdb.ReadUserDB(dbFile)
 	if err != nil {
 		return userDB, fmt.Errorf("couldn't read user db : %v", err)
@@ -49,7 +48,7 @@ func initUserDB(dbFile string) (*userdb.UserDB, error) {
 	if err != nil {
 		return userDB, fmt.Errorf("couldn't save user db : %v", err)
 	}
-	log.Printf("Loaded user database from file %s", dbFile)
+	log.Printf("%s user database %s", loadedOrCreated, dbFile)
 	return userDB, nil
 }
 
@@ -65,6 +64,10 @@ func initRoleDB(dbFile string) (*userdb.RoleDB, error) {
 		}
 		return true, ""
 	}
+	loadedOrCreated := "Loaded"
+	if !util.FileExists(dbFile) {
+		loadedOrCreated = "Created"
+	}
 
 	roleDB, err := userdb.ReadRoleDB(dbFile)
 	if err != nil {
@@ -75,7 +78,7 @@ func initRoleDB(dbFile string) (*userdb.RoleDB, error) {
 	if err != nil {
 		return roleDB, fmt.Errorf("couldn't save role db : %v", err)
 	}
-	log.Printf("Loaded role database from file %s", dbFile)
+	log.Printf("%s role database %s", loadedOrCreated, dbFile)
 	return roleDB, nil
 }
 
@@ -88,7 +91,7 @@ func initCookieStore(keyFile string) (*sessions.CookieStore, error) {
 	var cs *sessions.CookieStore
 	var key []byte
 	var err error
-	if !fileExists(keyFile) {
+	if !util.FileExists(keyFile) {
 		// Note: Don't store your key in your source code. Pass it via an
 		// environmental variable, or flag (or both), and don't accidentally commit it
 		// alongside your code. Ensure your key is sufficiently random - i.e. use Go's

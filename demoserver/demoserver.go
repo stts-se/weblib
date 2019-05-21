@@ -61,8 +61,8 @@ func main() {
 	host := flag.String("host", "127.0.0.1", "server host")
 	port := flag.Int("port", 7932, "server port")
 	serverKeyFile := flag.String("key", "server_config/serverkey", "server key file for session cookies")
-	userDBFile := flag.String("u", "", "user database")
-	roleDBFile := flag.String("r", "", "role database")
+	userDBFile := flag.String("u", "", "user database (required)")
+	roleDBFile := flag.String("r", "", "role database (required)")
 	help := flag.Bool("h", false, "print usage and exit")
 
 	// go run /usr/local/go/src/crypto/tls/generate_cert.go
