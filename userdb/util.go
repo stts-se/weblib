@@ -1,8 +1,6 @@
 package userdb
 
 import (
-	"bufio"
-	"compress/gzip"
 	"fmt"
 	"os"
 	"strings"
@@ -35,32 +33,6 @@ func fileExists(fileName string) bool {
 		return false
 	}
 	return true
-}
-
-func readLines(fn string) ([]string, error) {
-	var res []string
-	var scanner *bufio.Scanner
-	fh, err := os.Open(fn)
-	if err != nil {
-		return res, fmt.Errorf("failed to read '%s' : %v", fn, err)
-	}
-
-	if strings.HasSuffix(fn, ".gz") {
-		gz, err := gzip.NewReader(fh)
-		if err != nil {
-			return res, fmt.Errorf("failed to read '%s' : %v", fn, err)
-		}
-		scanner = bufio.NewScanner(gz)
-	} else {
-		scanner = bufio.NewScanner(fh)
-	}
-	for scanner.Scan() {
-		res = append(res, scanner.Text())
-	}
-	if err := scanner.Err(); err != nil {
-		return res, fmt.Errorf("failed to read '%s' : %v", fn, err)
-	}
-	return res, nil
 }
 
 func normaliseField(field string) string {

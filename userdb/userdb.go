@@ -6,6 +6,8 @@ import (
 	"sort"
 	"strings"
 	"sync"
+
+	"github.com/stts-se/weblib"
 )
 
 // UserDB a database of users
@@ -57,7 +59,7 @@ func ReadUserDB(fileName string) (*UserDB, error) {
 		return res, nil
 	}
 
-	lines, err := readLines(fileName)
+	lines, err := weblib.ReadLines(fileName)
 	if err != nil {
 		return res, err
 	}
