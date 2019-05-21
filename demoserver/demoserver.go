@@ -46,6 +46,8 @@ const i18nDir = "i18n"
 
 func main() {
 
+	cmdName := "demoserver"
+
 	rand.Seed(time.Now().UnixNano())
 
 	var err error
@@ -62,15 +64,24 @@ func main() {
 	tlsCert := flag.String("tlsCert", "", "server_config/cert.pem (generate with golang's crypto/tls/generate_cert.go) (default disabled)")
 	tlsKey := flag.String("tlsKey", "", "server_config/key.pem (generate with golang's crypto/tls/generate_cert.go) (default disabled)")
 
-	// parse check for missing required flags
+	// cache used flags flags
 	required := map[string]string{"u": "user database", "r": "role database"}
 	flag.Parse()
 	seen := make(map[string]bool)
 	flag.Visit(func(f *flag.Flag) { seen[f.Name] = true })
+
+	if *help {
+		fmt.Fprintf(os.Stderr, "Usage: %s <options>\n", cmdName)
+		flag.PrintDefaults()
+		os.Exit(1)
+	}
+
+	// check for missing, required flags
 	for req, desc := range required {
 		if !seen[req] {
 			// or possibly use `log.Fatalf` instead of:
 			fmt.Fprintf(os.Stderr, "missing required flag -%s %s\n", req, desc)
+			fmt.Fprintf(os.Stderr, "Usage: %s <options>\n", cmdName)
 			flag.PrintDefaults()
 			os.Exit(2) // the same exit code flag.Parse uses
 		}
@@ -78,12 +89,7 @@ func main() {
 
 	args := flag.Args()
 	if len(args) != 0 {
-		fmt.Fprintf(os.Stderr, "Usage: server <options>\n")
-		flag.PrintDefaults()
-		os.Exit(1)
-	}
-	if *help {
-		fmt.Fprintf(os.Stderr, "Usage: server <options>\n")
+		fmt.Fprintf(os.Stderr, "Usage: %s <options>\n", cmdName)
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
@@ -99,7 +105,7 @@ func main() {
 		tlsEnabled = true
 	}
 	if !tlsEnabled && (*tlsCert != "" || *tlsKey != "") {
-		fmt.Fprintf(os.Stderr, "Usage: server <options>\n")
+		fmt.Fprintf(os.Stderr, "Usage: %s <options>\n", cmdName)
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
