@@ -16,8 +16,6 @@ import (
 	"github.com/stts-se/weblib/util"
 )
 
-// see also https://blog.golang.org/matchlang
-
 // I18N a key-value dictionary container for a certain locale
 type I18N map[string]string
 
@@ -32,8 +30,8 @@ func (i *I18N) S(s string, args ...interface{}) string {
 		return res
 	}
 
-	// flatten incorrectly organized strings
-	// interface{} slice with a single []string slice element should probably flattened
+	// Flatten incorrectly organized variadic args -- an []interface{} slice with a
+	// single []string slice element is probably intended as a flattened variadic
 	if len(args) == 1 && reflect.TypeOf(args[0]) == reflect.TypeOf([]string{}) {
 		argsI := []interface{}{}
 		for _, s := range args[0].([]string) {

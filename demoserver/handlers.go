@@ -118,10 +118,12 @@ func translate(w http.ResponseWriter, r *http.Request) {
 	if argsParam == "" {
 		translated = cli18n.S(input)
 	} else {
+		// // Flatten  variadic (moved to the I28N.S method for now)
 		// args := []interface{}{}
 		// for _, s := range strings.Split(argsParam, ",") {
 		// 	args = append(args, s)
 		// }
+
 		args := strings.Split(argsParam, ",")
 		translated = cli18n.S(input, args)
 	}
