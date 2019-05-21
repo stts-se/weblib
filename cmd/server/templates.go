@@ -14,8 +14,10 @@ type TemplateData struct {
 	Data interface{}
 }
 
+const templatesFolder = "templates"
+
 func templateFromName(templateName string) string {
-	return filepath.Join("templates", fmt.Sprintf("%s.html", templateName))
+	return filepath.Join(templatesFolder, fmt.Sprintf("%s.html", templateName))
 }
 
 var templates = template.Must(template.ParseFiles(

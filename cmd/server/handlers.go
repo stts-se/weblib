@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"sort"
 	"strings"
 
@@ -91,4 +92,35 @@ func listLocales(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "- %s\n", loc)
 		}
 	}
+}
+
+func translate(w http.ResponseWriter, r *http.Request) {
+	cli18n := i18n.GetLocaleFromRequest(r)
+	//input, err := url.PathUnescape(weblib.GetParam(r, "input"))
+	// if err != nil {
+	// 	log.Printf("Couldn't unescape param input : %v", err)
+	// 	http.Error(w, "Internal server error", http.StatusInternalServerError)
+	// 	return
+	// }
+	input := weblib.GetParam(r, "input")
+	if input == "" {
+		log.Printf("Missing param input")
+		http.Error(w, "Missing param input", http.StatusPartialContent)
+		return
+	}
+	argsS, err := url.PathUnescape(weblib.GetParam(r, "args"))
+	if err != nil {
+		log.Printf("Couldn't unescape param args : %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	args := strings.Split(argsS, ",")
+	if argsS == "" {
+		args = []string{}
+	}
+	log.Printf("Input: %s", input)
+	log.Printf("Args: %#v", args)
+	translated := cli18n.S(input, args...)
+	fmt.Fprintf(w, translated)
+
 }

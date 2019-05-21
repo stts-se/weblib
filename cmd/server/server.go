@@ -42,6 +42,8 @@ var appInfo = map[string]string{
 	"Build timestamp": "unknown",
 }
 
+const i18nDir = "i18n"
+
 func main() {
 
 	rand.Seed(time.Now().UnixNano())
@@ -86,7 +88,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = i18n.ReadI18NPropFiles()
+	err = i18n.ReadI18NPropFiles(i18nDir)
 	if err != nil {
 		log.Fatalf("Couldn't read i18n properties : %v", err)
 	}
@@ -131,6 +133,7 @@ func main() {
 	r.HandleFunc("/", authHandlers.helloWorld)
 	r.HandleFunc("/doc/", simpleDoc(r, make(map[string]string)))
 	r.HandleFunc("/about/", about)
+	r.HandleFunc("/translate/", translate)
 
 	authR := r.PathPrefix("/auth").Subrouter()
 	authR.HandleFunc("/", authHandlers.message("User authorization"))

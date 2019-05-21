@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/stts-se/weblib"
 )
@@ -31,12 +32,18 @@ func (i *I18N) S(param string, values ...string) string {
 	return fmt.Sprintf(res, values)
 }
 
-// I18Ns the cached localisation dictionaries
-var I18Ns = make(map[string]*I18N)
+type i18nDB struct {
+	mutex *sync.RWMutex
+	data  map[string]*I18N
+}
+
+var i18ns = i18nDB{
+	mutex: &sync.RWMutex{},
+	data:  make(map[string]*I18N),
+}
 
 // DefaultLocale a default locale (string) for when it's not set by the user
 const DefaultLocale = "en"
-const i18nDir = "i18n"
 const i18nExtension = ".properties"
 
 // Default I18N instance for DefaultLocale
@@ -56,33 +63,36 @@ func sortedKeys(m map[string]*I18N) []string {
 
 // ListLocales list all locale (names)
 func ListLocales() []string {
-	return sortedKeys(I18Ns)
+	return sortedKeys(i18ns.data)
 }
 
 // GetOrDefault returns the I18N instance for the locale. If it doesn't exist, the default I18N will be returned.
 func GetOrDefault(locale string) *I18N {
-	if loc, ok := I18Ns[locale]; ok {
+	if loc, ok := i18ns.data[locale]; ok {
 		return loc
 	}
 	log.Printf("No i18n for locale %s, using default locale %s", locale, DefaultLocale)
 	return Default()
 }
 
-// ReadI18NPropFiles read all i18n property files in the folder i18nDir (see source code)
-func ReadI18NPropFiles() error {
-	files, err := ioutil.ReadDir(i18nDir)
+// ReadI18NPropFiles read and cache all i18n property files in the specified dir
+func ReadI18NPropFiles(dir string) error {
+	res := make(map[string]*I18N)
+
+	files, err := ioutil.ReadDir(dir)
 	if err != nil {
-		return fmt.Errorf("Couldn't list files in folder %s : %v", i18nDir, err)
+		return fmt.Errorf("Couldn't list files in folder %s : %v", dir, err)
 	}
 	for _, f := range files {
 		loc := I18N(make(map[string]string))
 		fn := f.Name()
+		fPath := filepath.Join(dir, f.Name())
 		ext := path.Ext(path.Base(fn))
 		if ext != i18nExtension {
 			continue
 		}
 		locName := strings.TrimSuffix(fn, ext)
-		lines, err := weblib.ReadLines(filepath.Join(i18nDir, f.Name()))
+		lines, err := weblib.ReadLines(fPath)
 		if err != nil {
 			return err
 		}
@@ -93,13 +103,16 @@ func ReadI18NPropFiles() error {
 				loc[fs[0]] = fs[1]
 			}
 		}
-		I18Ns[locName] = &loc
-		log.Printf("Read locale %s", locName)
+		res[locName] = &loc
+		log.Printf("Read locale %s from file %s", locName, fPath)
 	}
-	if _, ok := I18Ns[DefaultLocale]; !ok {
+	if _, ok := res[DefaultLocale]; !ok {
 		loc := I18N(make(map[string]string))
-		I18Ns[DefaultLocale] = &loc
+		res[DefaultLocale] = &loc
 	}
+	i18ns.mutex.Lock()
+	defer i18ns.mutex.Unlock()
+	i18ns.data = res
 	return nil
 }
 

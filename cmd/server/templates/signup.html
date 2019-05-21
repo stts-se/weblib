@@ -52,7 +52,12 @@
 
 	<script>
 
-	 //console.log({{.Data.Token}});
+	 const token = document.getElementById('token').value;
+	 if (token === undefined || token === null || token === "") {
+	     const li = document.createElement("li");
+	     li.innerText = "Undefined signup token"
+	     document.getElementById('errors').appendChild(li);
+	 }
 
 	 document.getElementById("username").focus();
 

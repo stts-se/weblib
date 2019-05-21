@@ -101,7 +101,7 @@ func (a *authHandlers) signup(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		token, err := url.PathUnescape(weblib.GetParam(r, "token"))
 		if err != nil {
-			log.Printf("Couldn't unescape token : %v", err)
+			log.Printf("Couldn't unescape param token : %v", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 		}
 		if len(token) == 0 {
