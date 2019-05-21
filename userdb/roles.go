@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/stts-se/weblib"
+	"github.com/stts-se/weblib/util"
 )
 
 // RoleDB a database of roles (username - roles)
@@ -47,11 +47,11 @@ func ReadRoleDB(fileName string) (*RoleDB, error) {
 		roles:       make(map[string]map[string]bool),
 		Constraints: func(role string, users []string) (bool, string) { return true, "" },
 	}
-	if !fileExists(fileName) {
+	if !util.FileExists(fileName) {
 		return res, nil
 	}
 
-	lines, err := weblib.ReadLines(fileName)
+	lines, err := util.ReadLines(fileName)
 	if err != nil {
 		return res, err
 	}
@@ -305,7 +305,7 @@ func (rdb *RoleDB) appendToFile(line string) error {
 }
 
 func (rdb *RoleDB) clearFile() error {
-	if fileExists(rdb.fileName) {
+	if util.FileExists(rdb.fileName) {
 		err := os.Remove(rdb.fileName)
 		if err != nil {
 			return err

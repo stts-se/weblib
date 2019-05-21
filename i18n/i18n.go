@@ -12,7 +12,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/stts-se/weblib"
+	"github.com/stts-se/weblib/util"
 )
 
 // see also https://blog.golang.org/matchlang
@@ -92,7 +92,7 @@ func ReadI18NPropFiles(dir string) error {
 			continue
 		}
 		locName := strings.TrimSuffix(fn, ext)
-		lines, err := weblib.ReadLines(fPath)
+		lines, err := util.ReadLines(fPath)
 		if err != nil {
 			return err
 		}
@@ -120,7 +120,7 @@ const stripLocaleRegion = true
 
 // GetLocaleFromRequest retrieve locale from http.Request (reads (1) URL params, (2) cookies, (3) request header)
 func GetLocaleFromRequest(r *http.Request) *I18N {
-	locName := weblib.GetParam(r, "locale")
+	locName := util.GetParam(r, "locale")
 	if locName == "" {
 		cookie, err := r.Cookie("locale")
 		log.Printf("Locale cookie from request: %#v", cookie)

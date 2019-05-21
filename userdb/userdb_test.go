@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stts-se/weblib"
+	"github.com/stts-se/weblib/util"
 )
 
 var fs = "Expected '%v', got '%v'"
@@ -128,7 +128,7 @@ func Test_UserDB_File(t *testing.T) {
 		t.Errorf(fs, w, g)
 	}
 
-	lines, err := weblib.ReadLines(udb1.fileName)
+	lines, err := util.ReadLines(udb1.fileName)
 	if err != nil {
 		t.Errorf("Fail: %v", err)
 	}
@@ -137,12 +137,12 @@ func Test_UserDB_File(t *testing.T) {
 		t.Errorf("%s", strings.Join(lines, "\n"))
 	}
 
-	_, err = weblib.ReadLines("test_files/userdb_test_file_does_not_exist")
+	_, err = util.ReadLines("test_files/userdb_test_file_does_not_exist")
 	if err == nil {
 		t.Errorf("Fail: expected error here")
 	}
 
-	//lines, err := weblib.ReadLines(udb1.fileName)
+	//lines, err := util.ReadLines(udb1.fileName)
 }
 
 func Test_UserDB_Constraints(t *testing.T) {

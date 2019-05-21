@@ -2,7 +2,6 @@ package userdb
 
 import (
 	"fmt"
-	"os"
 	"strings"
 )
 
@@ -26,13 +25,6 @@ var defaultConstraints = func(fieldName, fieldValue string) (bool, string) {
 		return false, fmt.Sprintf("%s is not normalised", fieldName)
 	}
 	return true, ""
-}
-
-func fileExists(fileName string) bool {
-	if _, err := os.Stat(fileName); os.IsNotExist(err) {
-		return false
-	}
-	return true
 }
 
 func normaliseField(field string) string {

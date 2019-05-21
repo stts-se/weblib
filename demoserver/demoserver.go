@@ -148,7 +148,6 @@ func main() {
 	r.HandleFunc("/", authHandlers.helloWorld)
 	r.HandleFunc("/doc/", simpleDoc(r, make(map[string]string)))
 	r.HandleFunc("/about/", about)
-	r.HandleFunc("/translate/", translate)
 
 	authR := r.PathPrefix("/auth").Subrouter()
 	authR.HandleFunc("/", authHandlers.message("User authorization"))
@@ -162,6 +161,7 @@ func main() {
 
 	localeR := r.PathPrefix("/locale").Subrouter()
 	localeR.HandleFunc("/list", listLocales)
+	localeR.HandleFunc("/translate/{input}", translate)
 
 	adminR := r.PathPrefix("/admin").Subrouter()
 	auth.RequireAuthRole(adminR, "admin")

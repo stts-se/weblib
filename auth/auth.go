@@ -152,7 +152,6 @@ func (a *Auth) Logout(w http.ResponseWriter, r *http.Request) (string, error) {
 	session.Values["authenticated-user"] = ""
 	session.Options.MaxAge = -1
 	session.Save(r, w)
-	//log.Printf("User %s logged out successfully", userName)
 	return userName, nil
 }
 

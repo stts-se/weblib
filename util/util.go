@@ -1,4 +1,4 @@
-package weblib
+package util
 
 import (
 	"bufio"
@@ -99,4 +99,12 @@ func ReadFile(fileName string) (string, error) {
 		return "", err
 	}
 	return strings.Join(lines, "\n"), nil
+}
+
+//FileExists returns true if the file exists on disk (without checking what type it is)
+func FileExists(fileName string) bool {
+	if _, err := os.Stat(fileName); os.IsNotExist(err) {
+		return false
+	}
+	return true
 }

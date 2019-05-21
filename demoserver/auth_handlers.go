@@ -7,9 +7,9 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/stts-se/weblib"
 	"github.com/stts-se/weblib/auth"
 	"github.com/stts-se/weblib/i18n"
+	"github.com/stts-se/weblib/util"
 )
 
 type authHandlers struct {
@@ -46,7 +46,7 @@ func (a *authHandlers) login(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	case "POST":
-		form, ok := weblib.ParseForm(r, []string{"username", "password"})
+		form, ok := util.ParseForm(r, []string{"username", "password"})
 		userName := form["username"]
 		password := form["password"]
 		if !ok {
@@ -59,8 +59,8 @@ func (a *authHandlers) login(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Login failed", http.StatusUnauthorized)
 			return
 		}
-		log.Printf("User %s logged in successfully", userName)
-		fmt.Fprintf(w, cli18n.S("Logged in successfully as user %s")+"\n", userName)
+		log.Printf("User %s logged in", userName)
+		fmt.Fprintf(w, cli18n.S("Logged in as user %s")+"\n", userName)
 		return
 
 	default:
@@ -86,7 +86,7 @@ func (a *authHandlers) invite(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		link := fmt.Sprintf("%s/auth/signup?token=%s", weblib.GetServerURL(r), url.PathEscape(token))
+		link := fmt.Sprintf("%s/auth/signup?token=%s", util.GetServerURL(r), url.PathEscape(token))
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		log.Printf("Created invitation link: %s", link)
 		fmt.Fprintf(w, fmt.Sprintf("%s: <a href='%s'>%s</a>\n", cli18n.S("Invitation link"), link, link))
@@ -99,7 +99,7 @@ func (a *authHandlers) signup(w http.ResponseWriter, r *http.Request) {
 	cli18n := i18n.GetLocaleFromRequest(r)
 	switch r.Method {
 	case "GET":
-		token, err := url.PathUnescape(weblib.GetParam(r, "token"))
+		token, err := url.PathUnescape(util.GetParam(r, "token"))
 		if err != nil {
 			log.Printf("Couldn't unescape param token : %v", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -122,7 +122,7 @@ func (a *authHandlers) signup(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	case "POST":
-		form, ok := weblib.ParseForm(r, []string{"username", "password", "token"})
+		form, ok := util.ParseForm(r, []string{"username", "password", "token"})
 		userName := form["username"]
 		password := form["password"]
 		token := form["token"]
@@ -163,8 +163,8 @@ func (a *authHandlers) logout(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		log.Printf("User %s logged out successfully", userName)
-		fmt.Fprintf(w, cli18n.S("Logged out user %s successfully")+"\n", userName)
+		log.Printf("User %s logged out", userName)
+		fmt.Fprintf(w, cli18n.S("Logged out user %s")+"\n", userName)
 	default:
 		http.NotFound(w, r)
 	}

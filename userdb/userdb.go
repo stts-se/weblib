@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/stts-se/weblib"
+	"github.com/stts-se/weblib/util"
 )
 
 // UserDB a database of users
@@ -55,11 +55,11 @@ func ReadUserDB(fileName string) (*UserDB, error) {
 		users:       make(map[string]string),
 		Constraints: func(user string, password string) (bool, string) { return true, "" },
 	}
-	if !fileExists(fileName) {
+	if !util.FileExists(fileName) {
 		return res, nil
 	}
 
-	lines, err := weblib.ReadLines(fileName)
+	lines, err := util.ReadLines(fileName)
 	if err != nil {
 		return res, err
 	}
@@ -269,7 +269,7 @@ func (udb *UserDB) appendToFile(line string) error {
 }
 
 func (udb *UserDB) clearFile() error {
-	if fileExists(udb.fileName) {
+	if util.FileExists(udb.fileName) {
 		err := os.Remove(udb.fileName)
 		if err != nil {
 			return err

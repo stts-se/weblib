@@ -10,8 +10,8 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"github.com/stts-se/weblib"
 	"github.com/stts-se/weblib/i18n"
+	"github.com/stts-se/weblib/util"
 )
 
 func message(msg string) http.HandlerFunc {
@@ -30,7 +30,7 @@ func httpError(httpStatusCode int) http.HandlerFunc {
 func logging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Request: %#v", r)
-		log.Printf("Request URL: %s", weblib.GetRequestURL(r))
+		log.Printf("Request URL: %s", util.GetRequestURL(r))
 		next.ServeHTTP(w, r)
 	})
 }
@@ -96,19 +96,19 @@ func listLocales(w http.ResponseWriter, r *http.Request) {
 
 func translate(w http.ResponseWriter, r *http.Request) {
 	cli18n := i18n.GetLocaleFromRequest(r)
-	//input, err := url.PathUnescape(weblib.GetParam(r, "input"))
+	//input, err := url.PathUnescape(util.GetParam(r, "input"))
 	// if err != nil {
 	// 	log.Printf("Couldn't unescape param input : %v", err)
 	// 	http.Error(w, "Internal server error", http.StatusInternalServerError)
 	// 	return
 	// }
-	input := weblib.GetParam(r, "input")
+	input := util.GetParam(r, "input")
 	if input == "" {
 		log.Printf("Missing param input")
 		http.Error(w, "Missing param input", http.StatusPartialContent)
 		return
 	}
-	argsS, err := url.PathUnescape(weblib.GetParam(r, "args"))
+	argsS, err := url.PathUnescape(util.GetParam(r, "args"))
 	if err != nil {
 		log.Printf("Couldn't unescape param args : %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
