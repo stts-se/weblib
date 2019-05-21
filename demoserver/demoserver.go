@@ -42,10 +42,10 @@ type pair struct {
 }
 
 var appInfo = []pair{
-	pair{"App name", "demoserver"},
-	pair{"Version", "0.1"},
-	pair{"Release date", "unknown"},
-	pair{"Build timestamp", time.Now().Format("2006-01-02 15:04:05 MST")},
+	{"App name", "demoserver"},
+	{"Version", "0.1"},
+	{"Release date", "unknown"},
+	{"Build timestamp", time.Now().Format("2006-01-02 15:04:05 MST")},
 }
 
 const i18nDir = "i18n"
