@@ -2,6 +2,7 @@
 
 This is a demo server, using the available libraries in this repository. It is also meant to show some design patterns, not suitable for library implementation, but still useful as templates for a server implementation.
 
+## Usage
 
     $ ./demoserver -help
     Usage of ./demoserver:
@@ -21,3 +22,13 @@ This is a demo server, using the available libraries in this repository. It is a
       -u string
         	user database
     
+
+## Example usage
+
+    $ ./demoserver -u userdb.txt -r roles.txt 
+    2019/05/21 17:29:44 Read locale en from file i18n/en.properties
+    2019/05/21 17:29:44 Read locale sv from file i18n/sv.properties
+    2019/05/21 17:29:44 Loaded user database from file userdb.txt
+    2019/05/21 17:29:44 Loaded role database from file roles.txt
+    2019/05/21 17:29:44 Getting ready to start server on http://127.0.0.1:7932
+    2019/05/21 17:29:44 Server up and running on http://127.0.0.1:7932
