@@ -37,7 +37,7 @@
 
 		    <tr>
 			<td colspan="3" align="right">
-			    <input id="token" type="text" name="token" hidden required="required" value="{{.Token}}" />
+			    <input id="token" type="text" name="token" hidden required="required" value="{{.Data.Token}}" />
 			    <button id="submit" type="submit">{{.Loc.S "Register"}}</button>
 			</td>
 		    </tr>
@@ -50,7 +50,10 @@
 	    
 	</div>
 
-	<script>	 
+	<script>
+
+	 //console.log({{.Data.Token}});
+
 	 document.getElementById("username").focus();
 
 	 document.getElementById('form').onsubmit = function() {

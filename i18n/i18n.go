@@ -41,7 +41,7 @@ const i18nExtension = ".properties"
 
 // Default I18N instance for DefaultLocale
 func Default() *I18N {
-	return GetOrCreate(DefaultLocale)
+	return GetOrDefault(DefaultLocale)
 }
 
 func sortedKeys(m map[string]*I18N) []string {
@@ -59,14 +59,13 @@ func ListLocales() []string {
 	return sortedKeys(I18Ns)
 }
 
-// GetOrCreate get the I18N instance for the locale, create if necessary
-func GetOrCreate(locale string) *I18N {
-	if _, ok := I18Ns[locale]; !ok {
-		loc := I18N(make(map[string]string))
-		I18Ns[locale] = &loc
+// GetOrDefault returns the I18N instance for the locale. If it doesn't exist, the default I18N will be returned.
+func GetOrDefault(locale string) *I18N {
+	if loc, ok := I18Ns[locale]; ok {
+		return loc
 	}
-	loc, _ := I18Ns[locale]
-	return loc
+	log.Printf("No i18n for locale %s, using default locale %s", locale, DefaultLocale)
+	return Default()
 }
 
 // ReadI18NPropFiles read all i18n property files in the folder i18nDir (see source code)
@@ -122,12 +121,12 @@ func GetLocaleFromRequest(r *http.Request) *I18N {
 			locName = strings.Split(acceptLangs[0], ",")[0]
 		}
 	}
-	log.Printf("Locale from request: %s", locName)
+	log.Printf("Requested locale: %s", locName)
 	if locName != "" {
 		if stripLocaleRegion {
 			locName = strings.Split(locName, "-")[0]
 		}
-		return GetOrCreate(locName)
+		return GetOrDefault(locName)
 	}
 	return Default()
 }
