@@ -195,6 +195,8 @@ func GetI18NFromRequest(r *http.Request) *I18N {
 	return Default()
 }
 
+// Close i18n nicely. If LogToTemplate is enabled, a template file (template.properties) will be created.
+// TODO: In the future, maybe also write cached translations to file (and append undefined translations to existing i18n files).
 func Close() error {
 	if LogToTemplate {
 		templateLog.mutex.Lock()
