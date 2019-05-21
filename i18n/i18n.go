@@ -20,7 +20,7 @@ import (
 // I18N a key-value dictionary container for a certain locale
 type I18N map[string]string
 
-// S is used to look up the localized version of the input string (`s'). It will also fill in the arguments (`args`) using fmt.Sprintf.
+// S is used to look up the localized version of the input string (s). It will also fill in the arguments (args) using fmt.Sprintf.
 func (i *I18N) S(s string, args ...interface{}) string {
 	res := s
 	if r, ok := (*i)[s]; ok {
