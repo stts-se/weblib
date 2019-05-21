@@ -26,5 +26,5 @@ Tab-separated file format:
  
  Sample file:
  
-    admin	angela james
-    superuser	james
+    member	angela james
+    admin	james
