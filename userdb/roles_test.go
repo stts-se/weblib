@@ -13,9 +13,9 @@ func Test_RoleDB(t *testing.T) {
 
 	rdb := NewRoleDB()
 
-	r := "admin"
+	r := "user"
 
-	err = rdb.InsertRole("Admin", []string{"john"})
+	err = rdb.InsertRole("user", []string{"john"})
 	if err != nil {
 		t.Errorf("Fail: %v", err)
 	}
@@ -66,15 +66,15 @@ func Test_RoleDB_File(t *testing.T) {
 		t.Errorf("Fail: %v", err)
 	}
 
-	err = rdb1.InsertRole("admin", []string{"angela", "robert"})
+	err = rdb1.InsertRole("user", []string{"angela", "james"})
 	if err != nil {
 		t.Errorf("Fail: %v", err)
 	}
-	err = rdb1.InsertRole("root", []string{"robert"})
+	err = rdb1.InsertRole("admin", []string{"james"})
 	if err != nil {
 		t.Errorf("Fail: %v", err)
 	}
-	err = rdb1.DeleteRole("root")
+	err = rdb1.DeleteRole("admin")
 	if err != nil {
 		t.Errorf("Fail: %v", err)
 	}
@@ -84,27 +84,27 @@ func Test_RoleDB_File(t *testing.T) {
 		t.Errorf("Fail: %v", err)
 	}
 
-	exists := rdb2.RoleExists("root")
+	exists := rdb2.RoleExists("admin")
 	if exists {
 		t.Errorf("oh no : %v", err)
 	}
 
-	ok := rdb1.Authorized("admin", "robert")
+	ok := rdb1.Authorized("user", "james")
 	if w, g := true, ok; w != g {
 		t.Errorf(fs, w, g)
 	}
 
-	ok = rdb2.Authorized("admin", "robert")
+	ok = rdb2.Authorized("user", "james")
 	if w, g := true, ok; w != g {
 		t.Errorf(fs, w, g)
 	}
 
-	ok = rdb1.Authorized("root", "robert")
+	ok = rdb1.Authorized("admin", "james")
 	if w, g := ok, ok; w != g {
 		t.Errorf(fs, w, g)
 	}
 
-	ok = rdb2.Authorized("root", "robert")
+	ok = rdb2.Authorized("admin", "james")
 	if w, g := false, ok; w != g {
 		t.Errorf(fs, w, g)
 	}
@@ -141,7 +141,7 @@ func Test_RoleDB_Constraints(t *testing.T) {
 		return true, ""
 	}
 
-	err = rdb.InsertRole("admin", []string{"leif"})
+	err = rdb.InsertRole("user", []string{"leif"})
 	if err == nil {
 		t.Errorf("Fail: expected error")
 	}
