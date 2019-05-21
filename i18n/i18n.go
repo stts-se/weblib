@@ -42,11 +42,12 @@ var i18ns = i18nDB{
 	data:  make(map[string]*I18N),
 }
 
-// DefaultLocale a default locale (string) for when it's not set by the user
+// DefaultLocale holds the name of the default locale (used when no locale is provided by the user/client)
 const DefaultLocale = "en"
+
 const i18nExtension = ".properties"
 
-// Default I18N instance for DefaultLocale
+// Default I18N instance (used when no locale is provided by the user/client)
 func Default() *I18N {
 	return GetOrDefault(DefaultLocale)
 }
