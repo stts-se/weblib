@@ -1,6 +1,6 @@
 # demoserver
 
-This is a demo web server, using the available libraries in this repository. It is also meant to show some design patterns, not suitable for library implementation, but still useful as templates for a server implementation.
+This is a simple demo web server, using the available libraries in this repository. It is also meant to show some design patterns, not suitable for library implementation, but still useful as templates for a server implementation.
 
 ## Usage
 
