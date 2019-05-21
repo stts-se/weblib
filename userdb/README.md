@@ -9,7 +9,7 @@ Tab-separated file format:
 1. username
 2. argon2 hashed password
 
-In some cases, the file may also contain database internal instructions, such as DELETE followed by a username.
+In some cases, the file may also contain database internal instructions, e.g., `DELETE` followed by a username.
 
 Sample file:
 
@@ -26,7 +26,7 @@ Tab-separated file format:
 1. role name
 2. comma-separated list of users
 
-In some cases, the file may also contain database internal instructions, such as DELETE followed by a role name.
+In some cases, the file may also contain database internal instructions, e.g., `DELETE` followed by a role name.
 
  Sample file:
  
