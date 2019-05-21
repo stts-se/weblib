@@ -12,7 +12,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// GetParam : get request params
+// GetParam retrieves the value of the specified parameter (looking for URL parameters and mux vars). If it's not defined, GetParam returns the empty string.
 func GetParam(r *http.Request, paramName string) string {
 	res := r.FormValue(paramName)
 	if res != "" {
@@ -22,7 +22,7 @@ func GetParam(r *http.Request, paramName string) string {
 	return vars[paramName]
 }
 
-// ParseForm : parse input form, and add required params to a key-value map
+// ParseForm : parse request form, and add required params to a key-value map
 func ParseForm(r *http.Request, requiredParams []string) (map[string]string, bool) {
 	res := make(map[string]string)
 	missing := []string{}
