@@ -120,7 +120,7 @@ func translate(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("Input: %s", input)
 	log.Printf("Args: %#v", args)
-	translated := cli18n.S(input, args...)
+	translated := cli18n.S(input, args)
 	fmt.Fprintf(w, translated)
 
 }
