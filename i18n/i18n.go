@@ -18,21 +18,32 @@ import (
 	"github.com/stts-se/weblib/util"
 )
 
+type dict map[string]string
+
 // I18N a key-value dictionary container for a certain locale
-type I18N map[string]string
+type I18N struct {
+	dict   dict
+	locale string
+}
 
 // S is used to look up the localized version of the input string (s). It will also fill in the arguments (args) using fmt.Sprintf.
 func (i *I18N) S(s string, args ...interface{}) string {
 	if LogToTemplate {
 		templateLog.mutex.Lock()
 		defer templateLog.mutex.Unlock()
-		templateLog.data[s] = true
+		if _, ok := templateLog.data[i.locale]; !ok {
+			templateLog.data[i.locale] = make(map[string]bool)
+		}
+		templateLog.data[i.locale][s] = true
 	}
 
 	res := s
-	if r, ok := (*i)[s]; ok {
+	if r, ok := (*i).dict[s]; ok {
 		res = r
+	} else {
+		log.Printf("Missing %s localization for input string %s", i.locale, s)
 	}
+
 	if len(args) == 0 {
 		return res
 	}
@@ -50,6 +61,11 @@ func (i *I18N) S(s string, args ...interface{}) string {
 	return fmt.Sprintf(res, args...)
 }
 
+// NewI18N returns a new (empty) I18N dictionary for the specified locale
+func NewI18N(locale string) *I18N {
+	return &I18N{dict: make(map[string]string), locale: locale}
+}
+
 type i18nDB struct {
 	mutex *sync.RWMutex
 	data  map[string]*I18N
@@ -60,16 +76,16 @@ var i18ns = i18nDB{
 	data:  make(map[string]*I18N),
 }
 
-var i18nDir = ""
+type set map[string]bool
 
 type templateLogger struct {
 	mutex *sync.RWMutex
-	data  map[string]bool
+	data  map[string]set
 }
 
 var templateLog = templateLogger{
 	mutex: &sync.RWMutex{},
-	data:  make(map[string]bool),
+	data:  make(map[string]set),
 }
 
 // DefaultLocale holds the name of the default locale (used when no locale is provided by the user/client)
@@ -82,7 +98,7 @@ func Default() *I18N {
 	return GetOrDefault(DefaultLocale)
 }
 
-func sortedKeys(m map[string]*I18N) []string {
+func sortedKeysString2I18N(m map[string]*I18N) []string {
 	res := []string{}
 	for k := range m {
 		res = append(res, k)
@@ -94,7 +110,7 @@ func sortedKeys(m map[string]*I18N) []string {
 
 // ListLocales list all locale (names)
 func ListLocales() []string {
-	return sortedKeys(i18ns.data)
+	return sortedKeysString2I18N(i18ns.data)
 }
 
 // GetOrDefault returns the I18N instance for the locale. If it doesn't exist, the default I18N will be returned.
@@ -106,20 +122,24 @@ func GetOrDefault(locale string) *I18N {
 	return Default()
 }
 
+// GetOrCreate returns the I18N instance for the locale. If it doesn't exist, a new, empty locale dictionary will be created (but not saved to cache)
+func GetOrCreate(locale string) *I18N {
+	if loc, ok := i18ns.data[locale]; ok {
+		return loc
+	}
+	log.Printf("No i18n defined for locale %s, creating a new instance on the fly", locale)
+	return NewI18N(locale)
+}
+
 // ReadI18NPropFiles read and cache all i18n property files in the specified dir
 func ReadI18NPropFiles(dir string) error {
 	res := make(map[string]*I18N)
-
-	if i18nDir == "" {
-		i18nDir = dir
-	}
 
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
 		return fmt.Errorf("Couldn't list files in folder %s : %v", dir, err)
 	}
 	for _, f := range files {
-		loc := I18N(make(map[string]string))
 		fn := f.Name()
 		fPath := filepath.Join(dir, f.Name())
 		ext := path.Ext(path.Base(fn))
@@ -132,21 +152,22 @@ func ReadI18NPropFiles(dir string) error {
 			return err
 		}
 
+		loc := NewI18N(locName)
 		for _, l := range lines {
 			if strings.HasPrefix(strings.TrimSpace(l), "#") {
 				continue
 			}
 			fs := strings.Split(l, "\t")
 			if len(fs) == 2 {
-				loc[fs[0]] = fs[1]
+				loc.dict[fs[0]] = fs[1]
 			}
 		}
-		res[locName] = &loc
+		res[locName] = loc
 		log.Printf("Read locale %s from %s", locName, fPath)
 	}
 	if _, ok := res[DefaultLocale]; !ok {
-		loc := I18N(make(map[string]string))
-		res[DefaultLocale] = &loc
+		loc := NewI18N(DefaultLocale)
+		res[DefaultLocale] = loc
 	}
 	i18ns.mutex.Lock()
 	defer i18ns.mutex.Unlock()
@@ -190,14 +211,18 @@ func GetI18NFromRequest(r *http.Request) *I18N {
 		if StripLocaleRegion {
 			locName = strings.Split(locName, "-")[0]
 		}
-		return GetOrDefault(locName)
+		if LogToTemplate {
+			return GetOrCreate(locName)
+		} else {
+			return GetOrDefault(locName)
+		}
 	}
 	return Default()
 }
 
 // Close i18n nicely. If LogToTemplate is enabled, a template file (template.properties) will be created.
 // TODO: In the future, maybe also write cached translations to file (and append undefined translations to existing i18n files).
-func Close() error {
+func Close(saveDir string) error {
 	if LogToTemplate {
 		templateLog.mutex.Lock()
 		defer templateLog.mutex.Unlock()
@@ -206,18 +231,19 @@ func Close() error {
 			return nil
 		}
 
-		if i18nDir == "" {
-			return fmt.Errorf("i18n is not initialised properly (no output dir)")
+		if saveDir == "" {
+			return fmt.Errorf("empty output dir")
 		}
-		templateFileName := path.Join(i18nDir, fmt.Sprintf("template%s", i18nExtension))
+		var sortedKeysString2Set = func(m map[string]set) []string {
+			res := []string{}
+			for k := range m {
+				res = append(res, k)
+			}
 
-		fh, err := os.Create(templateFileName)
-		if err != nil {
-			return fmt.Errorf("failed to open file : %v", err)
+			sort.Slice(res, func(i, j int) bool { return res[i] < res[j] })
+			return res
 		}
-		defer fh.Close()
-
-		var sortedKeys = func(m map[string]bool) []string {
+		var sortedKeysSet = func(m set) []string {
 			res := []string{}
 			for k := range m {
 				res = append(res, k)
@@ -227,11 +253,22 @@ func Close() error {
 			return res
 		}
 
-		fmt.Fprintf(fh, "# i18n template generated on %v\n", time.Now().Format("2006-01-02 15:04:05 MST"))
-		for _, s := range sortedKeys(templateLog.data) {
-			fmt.Fprintf(fh, "%s\n", s)
+		for _, locale := range sortedKeysString2Set(templateLog.data) {
+			utts := templateLog.data[locale]
+			templateFileName := path.Join(saveDir, fmt.Sprintf("%s.template", locale))
+
+			fh, err := os.Create(templateFileName)
+			if err != nil {
+				return fmt.Errorf("failed to open file : %v", err)
+			}
+			defer fh.Close()
+
+			fmt.Fprintf(fh, "# i18n template for %s generated on %v\n", locale, time.Now().Format("2006-01-02 15:04:05 MST"))
+			for _, from := range sortedKeysSet(utts) {
+				fmt.Fprintf(fh, "%s\n", from)
+			}
+			log.Printf("Saved i18n template to file %s", templateFileName)
 		}
-		log.Printf("Saved i18n template to file %s", templateFileName)
 	}
 	return nil
 }

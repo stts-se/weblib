@@ -7,7 +7,8 @@ import (
 var fs = "Expected '%v', got '%v'"
 
 func Test_I18N(t *testing.T) {
-	i18n := I18N{
+	i18n := NewI18N("sv")
+	i18n.dict = map[string]string{
 		"Logged in":                     "Inloggad",
 		"Logged in as user %s":          "Inloggad som användare %s",
 		"Logged in as user %s, role %s": "Inloggad som användare %s, roll %s",

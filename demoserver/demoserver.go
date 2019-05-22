@@ -39,7 +39,7 @@ func (s *Server) close() error {
 	if err != nil {
 		return fmt.Errorf("couldn't save user db : %v", err)
 	}
-	err = i18n.Close()
+	err = i18n.Close(i18nDir)
 	if err != nil {
 		log.Printf("Couldn't close i18mm : %v", err)
 	}
