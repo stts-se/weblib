@@ -73,11 +73,15 @@ func Test_ValidateI18NPropFiles_Invalid(t *testing.T) {
 		t.Errorf("Unexpected error : %v", err)
 	}
 	msgs, err = crossValidateI18NPropFiles(data, dir)
+	if err != nil {
+		t.Errorf("Unexpected error : %v", err)
+	}
 	if len(msgs) == 0 {
 		t.Errorf("Expected validation errors, got none.")
-	}
-	fmt.Printf("YES!! Wanted validation errors, and got validation errors!\n")
-	for _, msg := range msgs {
-		fmt.Printf(" - %v\n", msg)
+	} else {
+		fmt.Printf("YES!! Wanted validation errors, and got validation errors!\n")
+		for _, msg := range msgs {
+			fmt.Printf(" - %v\n", msg)
+		}
 	}
 }
