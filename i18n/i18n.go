@@ -19,6 +19,7 @@ import (
 )
 
 type dict map[string]string
+type set map[string]bool
 
 // I18N a key-value dictionary container for a certain locale
 type I18N struct {
@@ -29,8 +30,8 @@ type I18N struct {
 // S is used to look up the localized version of the input string (s). It will also fill in the arguments (args) using fmt.Sprintf. If LogToTemplate is set to true, any unknown translations will be logged to a template file.
 func (i *I18N) S(s string, args ...interface{}) string {
 	if LogToTemplate {
-		templateLog.mutex.Lock()
-		defer templateLog.mutex.Unlock()
+		templateLog.mutex.RLock()
+		defer templateLog.mutex.RUnlock()
 		if _, ok := templateLog.data[i.locale]; !ok {
 			templateLog.data[i.locale] = make(map[string]bool)
 		}
@@ -71,12 +72,10 @@ type i18nDB struct {
 	data  map[string]*I18N
 }
 
-var i18ns = i18nDB{
+var globalCache = i18nDB{
 	mutex: &sync.RWMutex{},
 	data:  make(map[string]*I18N),
 }
-
-type set map[string]bool
 
 type templateLogger struct {
 	mutex *sync.RWMutex
@@ -108,14 +107,16 @@ func sortedKeysString2I18N(m map[string]*I18N) []string {
 	return res
 }
 
-// ListLocales list all locale (names)
+// ListLocales list all locale (names) in the static mutex cache
 func ListLocales() []string {
-	return sortedKeysString2I18N(i18ns.data)
+	return sortedKeysString2I18N(globalCache.data)
 }
 
 // GetOrDefault returns the I18N instance for the locale. If it doesn't exist, the default I18N will be returned.
 func GetOrDefault(locale string) *I18N {
-	if loc, ok := i18ns.data[locale]; ok {
+	globalCache.mutex.Lock()
+	defer globalCache.mutex.Unlock()
+	if loc, ok := globalCache.data[locale]; ok {
 		return loc
 	}
 	log.Printf("No i18n defined for locale %s, using default locale %s", locale, DefaultLocale)
@@ -124,7 +125,9 @@ func GetOrDefault(locale string) *I18N {
 
 // GetOrCreate returns the I18N instance for the locale. If it doesn't exist, a new, empty locale dictionary will be created (but not saved to cache)
 func GetOrCreate(locale string) *I18N {
-	if loc, ok := i18ns.data[locale]; ok {
+	globalCache.mutex.Lock()
+	defer globalCache.mutex.Unlock()
+	if loc, ok := globalCache.data[locale]; ok {
 		return loc
 	}
 	log.Printf("No i18n defined for locale %s, creating a new instance on the fly", locale)
@@ -178,7 +181,7 @@ func readI18NPropFile(locName, fName string) (*I18N, error) {
 	return res, nil
 }
 
-// ReadI18NPropFiles read and cache all i18n property files in the specified dir
+// ReadI18NPropFiles read and all i18n property files in the specified dir, and save to static mutex cache
 func ReadI18NPropFiles(dir string) error {
 	res, err := readI18NPropFiles(dir)
 	if err != nil {
@@ -197,9 +200,9 @@ func ReadI18NPropFiles(dir string) error {
 		return fmt.Errorf("i18n cross validation failed")
 	}
 
-	i18ns.mutex.Lock()
-	defer i18ns.mutex.Unlock()
-	i18ns.data = res
+	globalCache.mutex.RLock()
+	defer globalCache.mutex.RUnlock()
+	globalCache.data = res
 	return nil
 }
 
