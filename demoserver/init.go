@@ -23,7 +23,7 @@ func initI18NPropFiles(dir string) error {
 	var err error
 	var db *i18n.I18NDB
 
-	db, err = i18n.ReadI18NPropFiles(dir, "en")
+	db, err = i18n.ReadI18NPropDir(dir, "en")
 	if err != nil {
 		return err
 	}

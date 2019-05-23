@@ -138,22 +138,34 @@ func (db *I18NDB) GetOrCreate(locale string) *I18N {
 	return newI18N(locale)
 }
 
-func readI18NPropFiles(dir string) (map[string]*I18N, error) {
+func readI18NPropDir(dir string) (map[string]*I18N, error) {
 	res := make(map[string]*I18N)
-
+	fNames := []string{}
 	files, err := ioutil.ReadDir(dir)
-	if err != nil {
-		return res, fmt.Errorf("couldn't list files in folder %s : %v", dir, err)
-	}
 	for _, f := range files {
 		fn := f.Name()
-		fPath := filepath.Join(dir, f.Name())
+		fullPath := filepath.Join(dir, f.Name())
 		ext := path.Ext(path.Base(fn))
 		if ext != i18nExtension {
 			continue
 		}
-		locName := strings.TrimSuffix(fn, ext)
-		loc, err := readI18NPropFile(locName, fPath)
+		fNames = append(fNames, fullPath)
+	}
+	if err != nil {
+		return res, fmt.Errorf("couldn't list files in folder %s : %v", dir, err)
+	}
+	return readI18NPropFiles(fNames)
+}
+func readI18NPropFiles(files []string) (map[string]*I18N, error) {
+	res := make(map[string]*I18N)
+
+	for _, f := range files {
+		ext := path.Ext(path.Base(f))
+		if ext != i18nExtension {
+			continue
+		}
+		locName := strings.TrimSuffix(filepath.Base(f), ext)
+		loc, err := readI18NPropFile(locName, f)
 		if err != nil {
 			return res, err
 		}
@@ -181,11 +193,27 @@ func readI18NPropFile(locName, fName string) (*I18N, error) {
 	return res, nil
 }
 
-// ReadI18NPropFiles read all i18n property files in the specified folder
-func ReadI18NPropFiles(dir, defaultLocale string) (*I18NDB, error) {
+// ReadI18NPropFiles reads i18n property files
+func ReadI18NPropFiles(dir string, files []string, defaultLocale string) (*I18NDB, error) {
 	res := newI18NDB(dir, defaultLocale)
 
-	i18ns, err := readI18NPropFiles(dir)
+	i18ns, err := readI18NPropFiles(files)
+	if err != nil {
+		return res, err
+	}
+
+	res.mutex.RLock()
+	defer res.mutex.RUnlock()
+	res.data = i18ns
+
+	return res, nil
+}
+
+// ReadI18NPropDir read all i18n property files in the specified folder
+func ReadI18NPropDir(dir, defaultLocale string) (*I18NDB, error) {
+	res := newI18NDB(dir, defaultLocale)
+
+	i18ns, err := readI18NPropDir(dir)
 	if err != nil {
 		return res, err
 	}

@@ -46,7 +46,7 @@ func Test_ValidateI18NPropFiles_Valid(t *testing.T) {
 
 	dir := "test_files/valid"
 
-	db, err = ReadI18NPropFiles(dir, "en")
+	db, err = ReadI18NPropDir(dir, "en")
 	if err != nil {
 		t.Errorf("Unexpected error : %v", err)
 	}
@@ -68,7 +68,7 @@ func Test_ValidateI18NPropFiles_Invalid(t *testing.T) {
 
 	dir := "test_files/invalid"
 
-	db, err = ReadI18NPropFiles(dir, "en")
+	db, err = ReadI18NPropDir(dir, "en")
 	if err != nil {
 		t.Errorf("Unexpected error : %v", err)
 	}
