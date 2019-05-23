@@ -70,9 +70,9 @@ func main() {
 
 	// FLAGS
 	flags := flaglib.NewFlagSet(cmdName, flaglib.ExitOnError)
-	help := flags.Bool("h", false, "print usage and exit")
-	host := flags.String("host", "127.0.0.1", "server `host`")
-	port := flags.Int("port", 7932, "server `port`")
+	help := flags.Bool("help", false, "print usage and exit")
+	host := flags.String("h", "127.0.0.1", "server `host`")
+	port := flags.Int("p", 7932, "server `port`")
 	serverKeyFile := flags.String("key", "server_config/serverkey", "server key `file` for session cookies")
 	userDBFile := flags.String("u", "", "user `database` (required)")
 	roleDBFile := flags.String("r", "", "role `database` (required)")
