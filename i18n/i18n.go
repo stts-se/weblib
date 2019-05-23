@@ -77,6 +77,7 @@ var templateLog = templateLogger{
 	data:  make(map[string]set),
 }
 
+// I18NDB a mutexed database of I18N instances
 type I18NDB struct {
 	mutex         *sync.RWMutex
 	data          map[string]*I18N
@@ -225,7 +226,7 @@ func GetLocaleFromRequest(r *http.Request) (string, string) {
 	return "", ""
 }
 
-// GetI18NFromRequest will lookup the requested locale in the cache, and return the corresponding I18N instance. If the requested locale doesn't exist, the default locale will be returned instead.
+// GetI18NFromRequest will lookup the requested locale, and return the corresponding I18N instance. If the requested locale doesn't exist, the default locale will be returned instead.
 func (db *I18NDB) GetI18NFromRequest(r *http.Request) *I18N {
 	locName, _ := GetLocaleFromRequest(r)
 	if locName != "" {
@@ -241,7 +242,6 @@ func (db *I18NDB) GetI18NFromRequest(r *http.Request) *I18N {
 }
 
 // Close i18n nicely. If LogToTemplate is enabled, and the saveDir is non-empty, a template file (template.properties) will be created.
-// TODO: In the future, maybe also write cached translations to file (and append undefined translations to existing i18n files).
 func (db *I18NDB) Close() error {
 	if LogToTemplate {
 		templateLog.mutex.Lock()
