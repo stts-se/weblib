@@ -27,7 +27,7 @@ type I18N struct {
 	locale string
 }
 
-// S is used to look up the localized version of the input string (s). It will also fill in the arguments (args) using fmt.Sprintf. If LogToTemplate is set to true, any unknown translations will be logged to a template file.
+// S is used to look up the localized version of the input string (s). It will also fill in the arguments (args) using fmt.Sprintf. If LogToTemplate is set to true, any unknown translations will be logged, and can later be saved to a template file.
 func (i *I18N) S(s string, args ...interface{}) string {
 	if LogToTemplate {
 		templateLog.mutex.RLock()
@@ -200,7 +200,7 @@ func ReadI18NPropFiles(dir, defaultLocale string) (*I18NDB, error) {
 // StripLocaleRegion set to true will ignore everything after the first dash (-) of a locale string
 var StripLocaleRegion = true
 
-// LogToTemplate  set to true to log all calls to I18N.S to a template file (template.properties)
+// LogToTemplate  if set to true, all undefined strings processed by I18N.S will be cached and logged to a template file when the Close function is called
 var LogToTemplate = false
 
 // GetLocaleFromRequest retrieves the requested locale from the http.Request. The first return value is the locale name, the second value is the source from which the locale was retrieved (param, cookie or header).
