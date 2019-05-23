@@ -1,6 +1,7 @@
 package i18n
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -36,4 +37,44 @@ func Test_I18N(t *testing.T) {
 		t.Errorf(fs, exp, got)
 	}
 
+}
+
+func Test_ValidateI18NPropFiles_Valid(t *testing.T) {
+	var msgs []string
+	var err error
+
+	dir := "test_files/valid"
+
+	err = ReadI18NPropFiles(dir)
+	if err != nil {
+		t.Errorf("Unexpected error : %v", err)
+	}
+	msgs, err = CrossValidateI18NPropFiles(dir)
+	if err != nil {
+		t.Errorf("Unexpected error : %v", err)
+	}
+	if len(msgs) > 0 {
+		for _, msg := range msgs {
+			t.Errorf("Unexpected validation error : %v", msg)
+		}
+	}
+}
+
+func Test_ValidateI18NPropFiles_Invalid(t *testing.T) {
+	var msgs []string
+	var err error
+
+	dir := "test_files/invalid"
+	err = ReadI18NPropFiles(dir)
+	if err != nil {
+		t.Errorf("Unexpected error : %v", err)
+	}
+	msgs, err = CrossValidateI18NPropFiles(dir)
+	if len(msgs) == 0 {
+		t.Errorf("Expected validation errors, got none.")
+	}
+	fmt.Printf("YES!! Wanted validation errors, and got validation errors!\n")
+	for _, msg := range msgs {
+		fmt.Printf(" - %v\n", msg)
+	}
 }

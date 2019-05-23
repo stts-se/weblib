@@ -26,7 +26,7 @@ type I18N struct {
 	locale string
 }
 
-// S is used to look up the localized version of the input string (s). It will also fill in the arguments (args) using fmt.Sprintf.
+// S is used to look up the localized version of the input string (s). It will also fill in the arguments (args) using fmt.Sprintf. If LogToTemplate is set to true, any unknown translations will be logged to a template file.
 func (i *I18N) S(s string, args ...interface{}) string {
 	if LogToTemplate {
 		templateLog.mutex.Lock()
@@ -131,13 +131,12 @@ func GetOrCreate(locale string) *I18N {
 	return NewI18N(locale)
 }
 
-// ReadI18NPropFiles read and cache all i18n property files in the specified dir
-func ReadI18NPropFiles(dir string) error {
+func readI18NPropFiles(dir string) (map[string]*I18N, error) {
 	res := make(map[string]*I18N)
 
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
-		return fmt.Errorf("Couldn't list files in folder %s : %v", dir, err)
+		return res, fmt.Errorf("couldn't list files in folder %s : %v", dir, err)
 	}
 	for _, f := range files {
 		fn := f.Name()
@@ -147,27 +146,43 @@ func ReadI18NPropFiles(dir string) error {
 			continue
 		}
 		locName := strings.TrimSuffix(fn, ext)
-		lines, err := util.ReadLines(fPath)
+		loc, err := readI18NPropFile(locName, fPath)
 		if err != nil {
-			return err
-		}
-
-		loc := NewI18N(locName)
-		for _, l := range lines {
-			if strings.HasPrefix(strings.TrimSpace(l), "#") {
-				continue
-			}
-			fs := strings.Split(l, "\t")
-			if len(fs) == 2 {
-				loc.dict[fs[0]] = fs[1]
-			}
+			return res, err
 		}
 		res[locName] = loc
-		log.Printf("Read locale %s from %s", locName, fPath)
 	}
 	if _, ok := res[DefaultLocale]; !ok {
 		loc := NewI18N(DefaultLocale)
 		res[DefaultLocale] = loc
+	}
+	return res, nil
+}
+
+func readI18NPropFile(locName, fName string) (*I18N, error) {
+	res := NewI18N(locName)
+	lines, err := util.ReadLines(fName)
+	if err != nil {
+		return res, err
+	}
+	for _, l := range lines {
+		if strings.HasPrefix(strings.TrimSpace(l), "#") {
+			continue
+		}
+		fs := strings.Split(l, "\t")
+		if len(fs) == 2 {
+			res.dict[fs[0]] = fs[1]
+		}
+	}
+	log.Printf("Read locale %s from %s", locName, fName)
+	return res, nil
+}
+
+// ReadI18NPropFiles read and cache all i18n property files in the specified dir
+func ReadI18NPropFiles(dir string) error {
+	res, err := readI18NPropFiles(dir)
+	if err != nil {
+		return err
 	}
 	i18ns.mutex.Lock()
 	defer i18ns.mutex.Unlock()
@@ -213,14 +228,13 @@ func GetI18NFromRequest(r *http.Request) *I18N {
 		}
 		if LogToTemplate {
 			return GetOrCreate(locName)
-		} else {
-			return GetOrDefault(locName)
 		}
+		return GetOrDefault(locName)
 	}
 	return Default()
 }
 
-// Close i18n nicely. If LogToTemplate is enabled, a template file (template.properties) will be created.
+// Close i18n nicely. If LogToTemplate is enabled, and the saveDir is non-empty, a template file (template.properties) will be created.
 // TODO: In the future, maybe also write cached translations to file (and append undefined translations to existing i18n files).
 func Close(saveDir string) error {
 	if LogToTemplate {
@@ -255,8 +269,7 @@ func Close(saveDir string) error {
 
 		for _, locale := range sortedKeysString2Set(templateLog.data) {
 			utts := templateLog.data[locale]
-			templateFileName := path.Join(saveDir, fmt.Sprintf("%s.template", locale))
-
+			templateFileName := path.Join(saveDir, fmt.Sprintf("%s_template.log", locale))
 			fh, err := os.Create(templateFileName)
 			if err != nil {
 				return fmt.Errorf("failed to open file : %v", err)
@@ -271,4 +284,134 @@ func Close(saveDir string) error {
 		}
 	}
 	return nil
+}
+
+// CrossValidateI18NPropFiles will return true if the files are validated without errors. The second return value is a slice of error messages, if any.
+func CrossValidateI18NPropFiles(dir string) ([]string, error) {
+
+	res := []string{}
+
+	// 1. Compare loaded I18Ns with pre-cached translation maps (order not preserved)
+	all := i18ns.data
+	if len(all) == 0 {
+		return res, fmt.Errorf("I18N data cache is empty. You need to run ReadI18NPropFile before validating.")
+	}
+	if len(all) == 1 {
+		return res, nil
+	}
+
+	locs := sortedKeysString2I18N(all)
+	ref := all[locs[0]]
+	refLoc := ref.locale
+	for _, loc := range locs[1:] {
+		this := all[loc]
+		thisLoc := this.locale
+
+		if rL, tL := len(ref.dict), len(this.dict); rL != tL {
+			res = append(res, fmt.Sprintf("mismatching number of items; %s:%d vs. %s:%d", refLoc, rL, thisLoc, tL))
+		}
+
+		for refKey := range ref.dict {
+			if _, ok := this.dict[refKey]; !ok {
+				res = append(res, fmt.Sprintf("key in %s is not present in %s\t%s", refLoc, thisLoc, refKey))
+			}
+		}
+		for thisKey := range this.dict {
+			if _, ok := ref.dict[thisKey]; !ok {
+				res = append(res, fmt.Sprintf("key in %s is not present in %s\t%s", thisLoc, refLoc, thisKey))
+			}
+		}
+
+	}
+
+	// 2. Load all keys and compare as list (to keep original order in the file)
+
+	// list all i18n property files
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return res, fmt.Errorf("couldn't list files in folder %s : %v", dir, err)
+	}
+
+	// read all translation keys
+	allKeys := make(map[string][]string)
+	allLocs := []string{}
+	for _, f := range files {
+		fn := f.Name()
+		fPath := filepath.Join(dir, f.Name())
+		ext := path.Ext(path.Base(fn))
+		if ext != i18nExtension {
+			continue
+		}
+		locName := strings.TrimSuffix(fn, ext)
+		lines, err := util.ReadLines(fPath)
+		if err != nil {
+			return res, err
+		}
+
+		keys := []string{}
+		for _, l := range lines {
+			if strings.HasPrefix(strings.TrimSpace(l), "#") {
+				continue
+			}
+			fs := strings.Split(l, "\t")
+			if len(fs) == 2 {
+				keys = append(keys, fs[0])
+			}
+		}
+		allKeys[locName] = keys
+		allLocs = append(allLocs, locName)
+	}
+
+	// compare all translation keys
+	if len(allLocs) == 0 {
+		return res, fmt.Errorf("no i18n prop files in folder %s", dir)
+	}
+
+	refLoc = allLocs[0]
+	refKeys := allKeys[refLoc]
+	for _, thisLoc := range allLocs[1:] {
+		thisKeys := allKeys[thisLoc]
+		if rL, tL := len(refKeys), len(thisKeys); rL != tL {
+			res = append(res, fmt.Sprintf("mismatching number of items; %s:%d vs. %s:%d", refLoc, rL, thisLoc, tL))
+		}
+
+		for i, refKey := range refKeys {
+			if i >= len(thisKeys) {
+				res = append(res, fmt.Sprintf("key no. %d in %s is not present in %s\t%s", (i+1), refLoc, thisLoc, refKey))
+				continue
+			}
+			thisKey := thisKeys[i]
+			if thisKey != refKey {
+				res = append(res, fmt.Sprintf("mismatching key for line %d (%s vs. %s)\t%s\t%s", (i+1), refLoc, thisLoc, refKey, thisKey))
+			}
+		}
+		if len(thisKeys) > len(refKeys) {
+			for i, thisKey := range thisKeys {
+				if i >= len(refKeys) {
+					res = append(res, fmt.Sprintf("key no. %d in %s is not present in %s\t%s", (i+1), thisLoc, refLoc, thisKey))
+				}
+			}
+		}
+	}
+
+	// clean out duplicates
+
+	var contains = func(slice []string, s string) bool {
+		for _, s0 := range slice {
+			if s0 == s {
+				return true
+			}
+		}
+		return false
+	}
+
+	resUniq := []string{}
+	for _, msg := range res {
+		if !contains(resUniq, msg) {
+			resUniq = append(resUniq, msg)
+		}
+	}
+
+	log.Printf("Cross validation completed for locales: %v", allLocs)
+	return resUniq, nil
 }

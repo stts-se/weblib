@@ -115,7 +115,7 @@ func main() {
 	}
 
 	i18n.LogToTemplate = *logI18NToTemplate
-	err = i18n.ReadI18NPropFiles(i18nDir)
+	err = initI18NPropFiles()
 	if err != nil {
 		log.Fatalf("Couldn't read i18n properties : %v", err)
 	}
