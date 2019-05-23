@@ -394,8 +394,7 @@ func CrossValidateI18NPropFiles(dir string) ([]string, error) {
 		}
 	}
 
-	// clean out duplicates
-
+	// Finally: clean out duplicates
 	var contains = func(slice []string, s string) bool {
 		for _, s0 := range slice {
 			if s0 == s {
