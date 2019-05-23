@@ -2,7 +2,7 @@
 package main
 
 import (
-	"flag"
+	flaglib "flag"
 	"fmt"
 	"log"
 	"math/rand"
@@ -60,8 +60,6 @@ var appInfo = []pair{
 
 const i18nDir = "i18n"
 
-const cmdName = "demoserver"
-
 var i18nCache *i18n.I18NDB
 
 func main() {
@@ -71,30 +69,36 @@ func main() {
 	var err error
 
 	// FLAGS
-	host := flag.String("host", "127.0.0.1", "server host")
-	port := flag.Int("port", 7932, "server port")
-	serverKeyFile := flag.String("key", "server_config/serverkey", "server key file for session cookies")
-	userDBFile := flag.String("u", "", "user database (required)")
-	roleDBFile := flag.String("r", "", "role database (required)")
-	logI18NToTemplate := flag.Bool("t", false, "generate a template from all strings processed by i18n (template file is generated on server shutdown)")
-	help := flag.Bool("h", false, "print usage and exit")
+	cmdName := os.Args[0]
+	flags := flaglib.NewFlagSet(cmdName, flaglib.ExitOnError)
+	host := flags.String("host", "127.0.0.1", "server host")
+	port := flags.Int("port", 7932, "server port")
+	serverKeyFile := flags.String("key", "server_config/serverkey", "server key file for session cookies")
+	userDBFile := flags.String("u", "", "user database (required)")
+	roleDBFile := flags.String("r", "", "role database (required)")
+	logI18NToTemplate := flags.Bool("t", false, "generate a template from all strings processed by i18n (template file is generated on server shutdown)")
+	help := flags.Bool("h", false, "print usage and exit")
 
 	// go run /usr/local/go/src/crypto/tls/generate_cert.go
-	tlsCert := flag.String("tlsCert", "", "server_config/cert.pem (generate with golang's crypto/tls/generate_cert.go) (default disabled)")
-	tlsKey := flag.String("tlsKey", "", "server_config/key.pem (generate with golang's crypto/tls/generate_cert.go) (default disabled)")
+	tlsCert := flags.String("tlsCert", "", "server_config/cert.pem (generate with golang's crypto/tls/generate_cert.go) (default disabled)")
+	tlsKey := flags.String("tlsKey", "", "server_config/key.pem (generate with golang's crypto/tls/generate_cert.go) (default disabled)")
 
-	flag.Parse()
-	args := flag.Args()
-	if *help {
+	flags.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s <options>\n", cmdName)
-		flag.PrintDefaults()
+		flags.PrintDefaults()
+	}
+
+	flags.Parse(os.Args[1:])
+	args := flags.Args()
+	if *help {
+		flags.Usage()
 		os.Exit(1)
 	}
 
 	requiredFlags := map[string]string{"u": "user database", "r": "role database"}
 	// cache what flags have been used
 	usedFlags := make(map[string]bool)
-	flag.Visit(func(f *flag.Flag) { usedFlags[f.Name] = true })
+	flags.Visit(func(f *flaglib.Flag) { usedFlags[f.Name] = true })
 
 	// check for missing, required flags
 	missingRequiredFlags := false
@@ -105,15 +109,13 @@ func main() {
 		}
 	}
 	if missingRequiredFlags {
-		fmt.Fprintf(os.Stderr, "Usage: %s <options>\n", cmdName)
-		flag.PrintDefaults()
-		os.Exit(2) // the same exit code flag.Parse uses
+		flags.Usage()
+		os.Exit(2) // the same exit code used by flag.Parse
 	}
 
 	// check remaining args (should be empty)
 	if len(args) != 0 {
-		fmt.Fprintf(os.Stderr, "Usage: %s <options>\n", cmdName)
-		flag.PrintDefaults()
+		flags.Usage()
 		os.Exit(1)
 	}
 
@@ -129,8 +131,7 @@ func main() {
 		tlsEnabled = true
 	}
 	if !tlsEnabled && (*tlsCert != "" || *tlsKey != "") {
-		fmt.Fprintf(os.Stderr, "Usage: %s <options>\n", cmdName)
-		flag.PrintDefaults()
+		flags.Usage()
 		os.Exit(1)
 	}
 	if tlsEnabled {
