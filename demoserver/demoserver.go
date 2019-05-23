@@ -51,14 +51,14 @@ type pair struct {
 	v2 interface{}
 }
 
+const cmdName = "demoserver"
+
 var appInfo = []pair{
-	{"App name", "demoserver"},
+	{"App name", cmdName},
 	{"Version", "0.1"},
 	{"Release date", "unknown"},
 	{"Build timestamp", time.Now().Format("2006-01-02 15:04:05 MST")},
 }
-
-const i18nDir = "i18n"
 
 var i18nCache *i18n.I18NDB
 
@@ -69,19 +69,20 @@ func main() {
 	var err error
 
 	// FLAGS
-	cmdName := os.Args[0]
 	flags := flaglib.NewFlagSet(cmdName, flaglib.ExitOnError)
-	host := flags.String("host", "127.0.0.1", "server host")
-	port := flags.Int("port", 7932, "server port")
-	serverKeyFile := flags.String("key", "server_config/serverkey", "server key file for session cookies")
-	userDBFile := flags.String("u", "", "user database (required)")
-	roleDBFile := flags.String("r", "", "role database (required)")
-	logI18NToTemplate := flags.Bool("t", false, "generate a template from all strings processed by i18n (template file is generated on server shutdown)")
 	help := flags.Bool("h", false, "print usage and exit")
+	host := flags.String("host", "127.0.0.1", "server `host`")
+	port := flags.Int("port", 7932, "server `port`")
+	serverKeyFile := flags.String("key", "server_config/serverkey", "server key `file` for session cookies")
+	userDBFile := flags.String("u", "", "user `database` (required)")
+	roleDBFile := flags.String("r", "", "role `database` (required)")
+
+	i18nDir := flags.String("i18n", "i18n", "i18n translation `folder`")
+	logI18NToTemplate := flags.Bool("i18n-gen", false, fmt.Sprintf("generate i18n templates for all undefined locale/strings processed by i18n (template files are saved to the i18n folder on server shutdown)"))
 
 	// go run /usr/local/go/src/crypto/tls/generate_cert.go
-	tlsCert := flags.String("tlsCert", "", "server_config/cert.pem (generate with golang's crypto/tls/generate_cert.go) (default disabled)")
-	tlsKey := flags.String("tlsKey", "", "server_config/key.pem (generate with golang's crypto/tls/generate_cert.go) (default disabled)")
+	tlsCert := flags.String("tlsCert", "", "tls certificate `file` (generate with golang's crypto/tls/generate_cert.go) (default disabled)")
+	tlsKey := flags.String("tlsKey", "", "tls key `file` (generate with golang's crypto/tls/generate_cert.go) (default disabled)")
 
 	flags.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s <options>\n", cmdName)
@@ -120,7 +121,7 @@ func main() {
 	}
 
 	i18n.LogToTemplate = *logI18NToTemplate
-	err = initI18NPropFiles(i18nDir)
+	err = initI18NPropFiles(*i18nDir)
 	if err != nil {
 		log.Fatalf("Couldn't read i18n properties : %v", err)
 	}
