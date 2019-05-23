@@ -39,9 +39,9 @@ func (s *Server) close() error {
 	if err != nil {
 		return fmt.Errorf("couldn't save user db : %v", err)
 	}
-	err = i18n.Close(i18nDir)
+	err = i18nCache.Close()
 	if err != nil {
-		log.Printf("Couldn't close i18mm : %v", err)
+		log.Printf("Couldn't close i18n cache : %v", err)
 	}
 	return nil
 }
@@ -59,7 +59,10 @@ var appInfo = []pair{
 }
 
 const i18nDir = "i18n"
+
 const cmdName = "demoserver"
+
+var i18nCache *i18n.I18NDB
 
 func main() {
 
@@ -115,7 +118,7 @@ func main() {
 	}
 
 	i18n.LogToTemplate = *logI18NToTemplate
-	err = i18n.ReadI18NPropFiles(i18nDir)
+	err = initI18NPropFiles(i18nDir)
 	if err != nil {
 		log.Fatalf("Couldn't read i18n properties : %v", err)
 	}

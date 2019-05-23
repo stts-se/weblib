@@ -62,19 +62,9 @@ func (i *I18N) S(s string, args ...interface{}) string {
 	return fmt.Sprintf(res, args...)
 }
 
-// NewI18N returns a new (empty) I18N dictionary for the specified locale
-func NewI18N(locale string) *I18N {
+// newI18N returns a new (empty) I18N dictionary for the specified locale
+func newI18N(locale string) *I18N {
 	return &I18N{dict: make(map[string]string), locale: locale}
-}
-
-type i18nDB struct {
-	mutex *sync.RWMutex
-	data  map[string]*I18N
-}
-
-var globalCache = i18nDB{
-	mutex: &sync.RWMutex{},
-	data:  make(map[string]*I18N),
 }
 
 type templateLogger struct {
@@ -87,14 +77,27 @@ var templateLog = templateLogger{
 	data:  make(map[string]set),
 }
 
-// DefaultLocale holds the name of the default locale (used when no locale is provided by the user/client)
-const DefaultLocale = "en"
+type I18NDB struct {
+	mutex         *sync.RWMutex
+	data          map[string]*I18N
+	DefaultLocale string
+	Dir           string
+}
+
+func newI18NDB(dir, defaultLocale string) *I18NDB {
+	return &I18NDB{
+		mutex:         &sync.RWMutex{},
+		data:          make(map[string]*I18N),
+		DefaultLocale: defaultLocale,
+		Dir:           dir,
+	}
+}
 
 const i18nExtension = ".properties"
 
 // Default I18N instance (used when no locale is provided by the user/client)
-func Default() *I18N {
-	return GetOrDefault(DefaultLocale)
+func (db *I18NDB) Default() *I18N {
+	return db.GetOrDefault(db.DefaultLocale)
 }
 
 func sortedKeysString2I18N(m map[string]*I18N) []string {
@@ -107,31 +110,31 @@ func sortedKeysString2I18N(m map[string]*I18N) []string {
 	return res
 }
 
-// ListLocales list all locale (names) in the static mutex cache
-func ListLocales() []string {
-	return sortedKeysString2I18N(globalCache.data)
+// ListLocales list all locale (names) in the db
+func (db *I18NDB) ListLocales() []string {
+	return sortedKeysString2I18N(db.data)
 }
 
 // GetOrDefault returns the I18N instance for the locale. If it doesn't exist, the default I18N will be returned.
-func GetOrDefault(locale string) *I18N {
-	globalCache.mutex.Lock()
-	defer globalCache.mutex.Unlock()
-	if loc, ok := globalCache.data[locale]; ok {
+func (db *I18NDB) GetOrDefault(locale string) *I18N {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+	if loc, ok := db.data[locale]; ok {
 		return loc
 	}
-	log.Printf("No i18n defined for locale %s, using default locale %s", locale, DefaultLocale)
-	return Default()
+	log.Printf("No i18n defined for locale %s, using default locale %s", locale, db.DefaultLocale)
+	return db.Default()
 }
 
 // GetOrCreate returns the I18N instance for the locale. If it doesn't exist, a new, empty locale dictionary will be created (but not saved to cache)
-func GetOrCreate(locale string) *I18N {
-	globalCache.mutex.Lock()
-	defer globalCache.mutex.Unlock()
-	if loc, ok := globalCache.data[locale]; ok {
+func (db *I18NDB) GetOrCreate(locale string) *I18N {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+	if loc, ok := db.data[locale]; ok {
 		return loc
 	}
 	log.Printf("No i18n defined for locale %s, creating a new instance on the fly", locale)
-	return NewI18N(locale)
+	return newI18N(locale)
 }
 
 func readI18NPropFiles(dir string) (map[string]*I18N, error) {
@@ -155,15 +158,11 @@ func readI18NPropFiles(dir string) (map[string]*I18N, error) {
 		}
 		res[locName] = loc
 	}
-	if _, ok := res[DefaultLocale]; !ok {
-		loc := NewI18N(DefaultLocale)
-		res[DefaultLocale] = loc
-	}
 	return res, nil
 }
 
 func readI18NPropFile(locName, fName string) (*I18N, error) {
-	res := NewI18N(locName)
+	res := newI18N(locName)
 	lines, err := util.ReadLines(fName)
 	if err != nil {
 		return res, err
@@ -181,29 +180,20 @@ func readI18NPropFile(locName, fName string) (*I18N, error) {
 	return res, nil
 }
 
-// ReadI18NPropFiles read and all i18n property files in the specified dir, and save to static mutex cache
-func ReadI18NPropFiles(dir string) error {
-	res, err := readI18NPropFiles(dir)
+// ReadI18NPropFiles read all i18n property files in the specified folder
+func ReadI18NPropFiles(dir, defaultLocale string) (*I18NDB, error) {
+	res := newI18NDB(dir, defaultLocale)
+
+	i18ns, err := readI18NPropFiles(dir)
 	if err != nil {
-		return err
+		return res, err
 	}
 
-	msgs, err := crossValidateI18NPropFiles(res, dir)
-	if err != nil {
-		return err
-	}
-	if len(msgs) > 0 {
-		log.Printf("I18N cross validation failed. See errors below.")
-		for _, msg := range msgs {
-			fmt.Fprintf(os.Stderr, " - I18N ERROR: %s\n", msg)
-		}
-		return fmt.Errorf("i18n cross validation failed")
-	}
+	res.mutex.RLock()
+	defer res.mutex.RUnlock()
+	res.data = i18ns
 
-	globalCache.mutex.RLock()
-	defer globalCache.mutex.RUnlock()
-	globalCache.data = res
-	return nil
+	return res, nil
 }
 
 // StripLocaleRegion set to true will ignore everything after the first dash (-) of a locale string
@@ -236,23 +226,23 @@ func GetLocaleFromRequest(r *http.Request) (string, string) {
 }
 
 // GetI18NFromRequest will lookup the requested locale in the cache, and return the corresponding I18N instance. If the requested locale doesn't exist, the default locale will be returned instead.
-func GetI18NFromRequest(r *http.Request) *I18N {
+func (db *I18NDB) GetI18NFromRequest(r *http.Request) *I18N {
 	locName, _ := GetLocaleFromRequest(r)
 	if locName != "" {
 		if StripLocaleRegion {
 			locName = strings.Split(locName, "-")[0]
 		}
 		if LogToTemplate {
-			return GetOrCreate(locName)
+			return db.GetOrCreate(locName)
 		}
-		return GetOrDefault(locName)
+		return db.GetOrDefault(locName)
 	}
-	return Default()
+	return db.Default()
 }
 
 // Close i18n nicely. If LogToTemplate is enabled, and the saveDir is non-empty, a template file (template.properties) will be created.
 // TODO: In the future, maybe also write cached translations to file (and append undefined translations to existing i18n files).
-func Close(saveDir string) error {
+func (db *I18NDB) Close() error {
 	if LogToTemplate {
 		templateLog.mutex.Lock()
 		defer templateLog.mutex.Unlock()
@@ -261,7 +251,7 @@ func Close(saveDir string) error {
 			return nil
 		}
 
-		if saveDir == "" {
+		if db.Dir == "" {
 			return fmt.Errorf("empty output dir")
 		}
 		var sortedKeysString2Set = func(m map[string]set) []string {
@@ -285,7 +275,7 @@ func Close(saveDir string) error {
 
 		for _, locale := range sortedKeysString2Set(templateLog.data) {
 			utts := templateLog.data[locale]
-			templateFileName := path.Join(saveDir, fmt.Sprintf("%s_template.log", locale))
+			templateFileName := path.Join(db.Dir, fmt.Sprintf("%s_template.log", locale))
 			fh, err := os.Create(templateFileName)
 			if err != nil {
 				return fmt.Errorf("failed to open file : %v", err)
@@ -302,24 +292,24 @@ func Close(saveDir string) error {
 	return nil
 }
 
-// crossValidateI18NPropFiles will return true if the files are validated without errors. The second return value is a slice of error messages, if any.
-func crossValidateI18NPropFiles(loadedI18Ns map[string]*I18N, dir string) ([]string, error) {
+// CrossValidate will return true if the files are validated without errors. The second return value is a slice of error messages, if any.
+func (db *I18NDB) CrossValidate() ([]string, error) {
 
 	res := []string{}
 
 	// 1. Compare loaded I18Ns with pre-cached translation maps (order not preserved)
-	if len(loadedI18Ns) == 0 {
+	if len(db.data) == 0 {
 		return res, fmt.Errorf("I18N data cache is empty. You need to run ReadI18NPropFile before validating.")
 	}
-	if len(loadedI18Ns) == 1 {
+	if len(db.data) == 1 {
 		return res, nil
 	}
 
-	locs := sortedKeysString2I18N(loadedI18Ns)
-	ref := loadedI18Ns[locs[0]]
+	locs := sortedKeysString2I18N(db.data)
+	ref := db.data[locs[0]]
 	refLoc := ref.locale
 	for _, loc := range locs[1:] {
-		this := loadedI18Ns[loc]
+		this := db.data[loc]
 		thisLoc := this.locale
 
 		if rL, tL := len(ref.dict), len(this.dict); rL != tL {
@@ -342,9 +332,9 @@ func crossValidateI18NPropFiles(loadedI18Ns map[string]*I18N, dir string) ([]str
 	// 2. Load all keys and compare as list (to keep original order in the file)
 
 	// list all i18n property files
-	files, err := ioutil.ReadDir(dir)
+	files, err := ioutil.ReadDir(db.Dir)
 	if err != nil {
-		return res, fmt.Errorf("couldn't list files in folder %s : %v", dir, err)
+		return res, fmt.Errorf("couldn't list files in folder %s : %v", db.Dir, err)
 	}
 
 	// read all translation keys
@@ -352,7 +342,7 @@ func crossValidateI18NPropFiles(loadedI18Ns map[string]*I18N, dir string) ([]str
 	allLocs := []string{}
 	for _, f := range files {
 		fn := f.Name()
-		fPath := filepath.Join(dir, f.Name())
+		fPath := filepath.Join(db.Dir, f.Name())
 		ext := path.Ext(path.Base(fn))
 		if ext != i18nExtension {
 			continue
@@ -379,7 +369,7 @@ func crossValidateI18NPropFiles(loadedI18Ns map[string]*I18N, dir string) ([]str
 
 	// compare all translation keys
 	if len(allLocs) == 0 {
-		return res, fmt.Errorf("no i18n prop files in folder %s", dir)
+		return res, fmt.Errorf("no i18n prop files in folder %s", db.Dir)
 	}
 
 	refLoc = allLocs[0]

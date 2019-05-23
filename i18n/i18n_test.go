@@ -8,7 +8,7 @@ import (
 var fs = "Expected '%v', got '%v'"
 
 func Test_I18N(t *testing.T) {
-	i18n := NewI18N("sv")
+	i18n := newI18N("sv")
 	i18n.dict = map[string]string{
 		"Logged in":                     "Inloggad",
 		"Logged in as user %s":          "Inloggad som användare %s",
@@ -42,15 +42,15 @@ func Test_I18N(t *testing.T) {
 func Test_ValidateI18NPropFiles_Valid(t *testing.T) {
 	var msgs []string
 	var err error
-	var data map[string]*I18N
+	var db *I18NDB
 
 	dir := "test_files/valid"
 
-	data, err = readI18NPropFiles(dir)
+	db, err = ReadI18NPropFiles(dir, "en")
 	if err != nil {
 		t.Errorf("Unexpected error : %v", err)
 	}
-	msgs, err = crossValidateI18NPropFiles(data, dir)
+	msgs, err = db.CrossValidate()
 	if err != nil {
 		t.Errorf("Unexpected error : %v", err)
 	}
@@ -64,15 +64,15 @@ func Test_ValidateI18NPropFiles_Valid(t *testing.T) {
 func Test_ValidateI18NPropFiles_Invalid(t *testing.T) {
 	var msgs []string
 	var err error
-	var data map[string]*I18N
+	var db *I18NDB
 
 	dir := "test_files/invalid"
 
-	data, err = readI18NPropFiles(dir)
+	db, err = ReadI18NPropFiles(dir, "en")
 	if err != nil {
 		t.Errorf("Unexpected error : %v", err)
 	}
-	msgs, err = crossValidateI18NPropFiles(data, dir)
+	msgs, err = db.CrossValidate()
 	if err != nil {
 		t.Errorf("Unexpected error : %v", err)
 	}

@@ -13,9 +13,34 @@ import (
 
 	"github.com/gorilla/sessions"
 
+	"github.com/stts-se/weblib/i18n"
 	"github.com/stts-se/weblib/userdb"
 	"github.com/stts-se/weblib/util"
 )
+
+func initI18NPropFiles(dir string) error {
+	var msgs []string
+	var err error
+	var db *i18n.I18NDB
+
+	db, err = i18n.ReadI18NPropFiles(dir, "en")
+	if err != nil {
+		return err
+	}
+	msgs, err = db.CrossValidate()
+	if err != nil {
+		return fmt.Errorf("I18N cross validation failed : %v", err)
+	}
+	if len(msgs) > 0 {
+		log.Printf("I18N cross validation errors below.\n")
+		for _, msg := range msgs {
+			fmt.Fprintf(os.Stderr, "I18N validation error : %s", msg)
+		}
+		return fmt.Errorf("I18N cross validation failed")
+	}
+	i18nCache = db
+	return nil
+}
 
 func initUserDB(dbFile string) (*userdb.UserDB, error) {
 	var constraints = func(userName, password string) (bool, string) {
