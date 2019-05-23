@@ -184,6 +184,19 @@ func ReadI18NPropFiles(dir string) error {
 	if err != nil {
 		return err
 	}
+
+	msgs, err := crossValidateI18NPropFiles(res, dir)
+	if err != nil {
+		return err
+	}
+	if len(msgs) > 0 {
+		log.Printf("I18N cross validation failed. See errors below.")
+		for _, msg := range msgs {
+			fmt.Fprintf(os.Stderr, " - I18N ERROR: %s\n", msg)
+		}
+		return fmt.Errorf("i18n cross validation failed")
+	}
+
 	i18ns.mutex.Lock()
 	defer i18ns.mutex.Unlock()
 	i18ns.data = res
@@ -286,25 +299,24 @@ func Close(saveDir string) error {
 	return nil
 }
 
-// CrossValidateI18NPropFiles will return true if the files are validated without errors. The second return value is a slice of error messages, if any.
-func CrossValidateI18NPropFiles(dir string) ([]string, error) {
+// crossValidateI18NPropFiles will return true if the files are validated without errors. The second return value is a slice of error messages, if any.
+func crossValidateI18NPropFiles(loadedI18Ns map[string]*I18N, dir string) ([]string, error) {
 
 	res := []string{}
 
 	// 1. Compare loaded I18Ns with pre-cached translation maps (order not preserved)
-	all := i18ns.data
-	if len(all) == 0 {
+	if len(loadedI18Ns) == 0 {
 		return res, fmt.Errorf("I18N data cache is empty. You need to run ReadI18NPropFile before validating.")
 	}
-	if len(all) == 1 {
+	if len(loadedI18Ns) == 1 {
 		return res, nil
 	}
 
-	locs := sortedKeysString2I18N(all)
-	ref := all[locs[0]]
+	locs := sortedKeysString2I18N(loadedI18Ns)
+	ref := loadedI18Ns[locs[0]]
 	refLoc := ref.locale
 	for _, loc := range locs[1:] {
-		this := all[loc]
+		this := loadedI18Ns[loc]
 		thisLoc := this.locale
 
 		if rL, tL := len(ref.dict), len(this.dict); rL != tL {

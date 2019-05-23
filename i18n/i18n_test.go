@@ -42,14 +42,15 @@ func Test_I18N(t *testing.T) {
 func Test_ValidateI18NPropFiles_Valid(t *testing.T) {
 	var msgs []string
 	var err error
+	var data map[string]*I18N
 
 	dir := "test_files/valid"
 
-	err = ReadI18NPropFiles(dir)
+	data, err = readI18NPropFiles(dir)
 	if err != nil {
 		t.Errorf("Unexpected error : %v", err)
 	}
-	msgs, err = CrossValidateI18NPropFiles(dir)
+	msgs, err = crossValidateI18NPropFiles(data, dir)
 	if err != nil {
 		t.Errorf("Unexpected error : %v", err)
 	}
@@ -63,13 +64,15 @@ func Test_ValidateI18NPropFiles_Valid(t *testing.T) {
 func Test_ValidateI18NPropFiles_Invalid(t *testing.T) {
 	var msgs []string
 	var err error
+	var data map[string]*I18N
 
 	dir := "test_files/invalid"
-	err = ReadI18NPropFiles(dir)
+
+	data, err = readI18NPropFiles(dir)
 	if err != nil {
 		t.Errorf("Unexpected error : %v", err)
 	}
-	msgs, err = CrossValidateI18NPropFiles(dir)
+	msgs, err = crossValidateI18NPropFiles(data, dir)
 	if len(msgs) == 0 {
 		t.Errorf("Expected validation errors, got none.")
 	}
