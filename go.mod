@@ -4,7 +4,7 @@ go 1.24
 
 require (
 	github.com/google/uuid v1.1.1
-	github.com/gorilla/mux v1.7.2
+	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/sessions v1.1.3
 	golang.org/x/crypto v0.31.0
 )
