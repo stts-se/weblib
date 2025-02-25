@@ -1,6 +1,6 @@
 module github.com/stts-se/weblib
 
-go 1.20
+go 1.24
 
 require (
 	github.com/google/uuid v1.1.1

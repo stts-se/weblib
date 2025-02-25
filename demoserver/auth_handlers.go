@@ -19,7 +19,7 @@ func (a *authHandlers) helloWorld(w http.ResponseWriter, r *http.Request) {
 	cli18n := i18nCache.GetI18NFromRequest(r)
 	var msg string
 	if ok, userName := a.Auth.IsLoggedIn(r); ok {
-		msg = fmt.Sprintf(cli18n.S("Hello, you are logged in as user %s!", userName))
+		msg = cli18n.S("Hello, you are logged in as user %s!", userName)
 	} else {
 		msg = cli18n.S("Hello, you are not logged in.")
 	}
@@ -63,7 +63,8 @@ func (a *authHandlers) login(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		log.Printf("User %s logged in", userName)
-		fmt.Fprintf(w, cli18n.S("Logged in as user %s", userName)+"\n")
+		msg := cli18n.S("Logged in as user %s", userName) + "\n"
+		fmt.Fprint(w, msg)
 		return
 
 	default:
@@ -92,7 +93,8 @@ func (a *authHandlers) invite(w http.ResponseWriter, r *http.Request) {
 		link := fmt.Sprintf("%s/auth/signup?token=%s", util.GetServerURL(r), url.PathEscape(token))
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		log.Printf("Created invitation link: %s", link)
-		fmt.Fprintf(w, fmt.Sprintf("%s: <a href='%s'>%s</a>\n", cli18n.S("Invitation link"), link, link))
+		msg := fmt.Sprintf("%s: <a href='%s'>%s</a>\n", cli18n.S("Invitation link"), link, link)
+		fmt.Fprint(w, msg)
 	default:
 		http.NotFound(w, r)
 	}
@@ -141,7 +143,8 @@ func (a *authHandlers) signup(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		log.Printf("Created used %s", userName)
-		fmt.Fprintf(w, cli18n.S("Created user %s", userName)+"\n")
+		msg := cli18n.S("Created user %s", userName) + "\n"
+		fmt.Fprint(w, msg)
 		return
 
 	default:
@@ -168,7 +171,8 @@ func (a *authHandlers) logout(w http.ResponseWriter, r *http.Request) {
 		}
 
 		log.Printf("User %s logged out", userName)
-		fmt.Fprintf(w, cli18n.S("Logged out user %s", userName)+"\n")
+		msg := cli18n.S("Logged out user %s", userName) + "\n"
+		fmt.Fprint(w, msg)
 	default:
 		http.NotFound(w, r)
 	}
@@ -176,7 +180,8 @@ func (a *authHandlers) logout(w http.ResponseWriter, r *http.Request) {
 
 func (a *authHandlers) listUsers(w http.ResponseWriter, r *http.Request) {
 	cli18n := i18nCache.GetI18NFromRequest(r)
-	fmt.Fprintf(w, cli18n.S("Users")+"\n")
+	msg := cli18n.S("Users") + "\n"
+	fmt.Fprint(w, msg)
 	for _, uName := range a.Auth.ListUsers() {
 		fmt.Fprintf(w, "- %s\n", uName)
 	}

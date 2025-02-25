@@ -86,7 +86,8 @@ func about(w http.ResponseWriter, r *http.Request) {
 
 func listLocales(w http.ResponseWriter, r *http.Request) {
 	cli18n := i18nCache.GetI18NFromRequest(r)
-	fmt.Fprintf(w, cli18n.S("Locales")+"\n")
+	msg := cli18n.S("Locales") + "\n"
+	fmt.Fprint(w, msg)
 	for _, loc := range i18nCache.ListLocales() {
 		if loc == i18nCache.DefaultLocale {
 			fmt.Fprintf(w, "- %s (default)\n", loc)
@@ -129,6 +130,7 @@ func translate(w http.ResponseWriter, r *http.Request) {
 		args := strings.Split(argsParam, ",")
 		translated = cli18n.S(input, args)
 	}
-	fmt.Fprintf(w, strings.TrimSpace(translated)+"\n")
+	msg := strings.TrimSpace(translated) + "\n"
+	fmt.Fprint(w, msg)
 
 }
